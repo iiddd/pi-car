@@ -1,0 +1,8 @@
+ktor:
+  deployment:
+    port: 8080
+    watch:
+      - server
+  application:
+    modules:
+      - server.MainKt.main
