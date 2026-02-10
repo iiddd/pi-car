@@ -1,38 +1,29 @@
 package server
 
-import io.ktor.server.engine.embeddedServer
-import io.ktor.server.netty.Netty
-import io.ktor.server.application.*
-import io.ktor.server.routing.*
-import io.ktor.server.websocket.*
-import io.ktor.server.plugins.contentnegotiation.*
-import io.ktor.serialization.kotlinx.json.*
-import kotlinx.serialization.json.Json
-import server.routes.setupDebugRoutes
-import server.routes.setupWebSocketRoutes
-import server.hardware.PiGPIOManager
-import server.Config
-
+import com.diozero.api.I2CDevice
+import com.diozero.devices.PCA9685
 fun main() {
-    embeddedServer(Netty, port = 8080, host = "0.0.0.0", module = Application::mainModule)
-        .start(wait = true)
-}
+    println("⚙️ ESC Test Program Starting...")
 
-fun Application.mainModule() {
-    // ✅ Force GPIO and PCA9685 setup early (before first command)
-    if (!Config.mockMode) {
-        println("📦 Preloading PiGPIOManager...")
-        PiGPIOManager.toString() // triggers lazy init of object and controller
-    }
+    val device = I2CDevice(1, PCA9685.DEFAULT_ADDRESS)
+    val pca9685 = PCA9685(device)
 
-    install(ContentNegotiation) {
-        json(Json { prettyPrint = true })
-    }
+    val motorChannel = 1
 
-    install(WebSockets)
+    // Step 1: Neutral pulse (arming)
+    println("🛑 Sending NEUTRAL pulse (1500 µs)")
+    pca9685.setDutyUs(motorChannel, 1500)
+    Thread.sleep(5000) // wait 5 sec for ESC to arm
 
-    routing {
-        setupWebSocketRoutes()
-        setupDebugRoutes()
-    }
+    // Step 2: Gentle throttle
+    println("🚀 Sending FORWARD throttle (1600 µs)")
+    pca9685.setDutyUs(motorChannel, 1600)
+    Thread.sleep(3000)
+
+    // Step 3: Back to neutral
+    println("🛑 Sending NEUTRAL again (1500 µs)")
+    pca9685.setDutyUs(motorChannel, 1500)
+    Thread.sleep(3000)
+
+    println("✅ ESC Test Completed!")
 }

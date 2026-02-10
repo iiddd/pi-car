@@ -1,44 +1,84 @@
-# pi-car
+# Pi Car Controller
 
-This project was created using the [Ktor Project Generator](https://start.ktor.io).
+A remote-controlled car project based on a Raspberry Pi, controlled over WebSockets using [Ktor](https://ktor.io).  
+The car uses a PCA9685 PWM driver to control a servo (steering) and a brushless ESC + motor (throttle).
 
-Here are some useful links to get you started:
+---
 
-- [Ktor Documentation](https://ktor.io/docs/home.html)
-- [Ktor GitHub page](https://github.com/ktorio/ktor)
-- The [Ktor Slack chat](https://app.slack.com/client/T09229ZC6/C0A974TJ9). You'll need
-  to [request an invite](https://surveys.jetbrains.com/s3/kotlin-slack-sign-up) to join.
+## ✅ Features
 
-## Features
+- WebSocket control interface (Ktor)
+- Servo-based steering using Diozero + PCA9685
+- Brushless ESC motor throttle control via PWM
+- Modular hardware abstraction (`ServoManager`, `MotorManager`, `CarController`)
+- Kotlin-based server-side logic with clean project structure
+- Lab power supply support for safe development
 
-Here's a list of features included in this project:
+---
 
-| Name                                                                   | Description                                                                        |
-| ------------------------------------------------------------------------|------------------------------------------------------------------------------------ |
-| [Routing](https://start.ktor.io/p/routing)                             | Provides a structured routing DSL                                                  |
-| [WebSockets](https://start.ktor.io/p/ktor-websockets)                  | Adds WebSocket protocol support for bidirectional client connections               |
-| [Content Negotiation](https://start.ktor.io/p/content-negotiation)     | Provides automatic content conversion according to Content-Type and Accept headers |
-| [kotlinx.serialization](https://start.ktor.io/p/kotlinx-serialization) | Handles JSON serialization using kotlinx.serialization library                     |
-| [Call Logging](https://start.ktor.io/p/call-logging)                   | Logs client requests                                                               |
+## 🧠 Project Recap
 
-## Building & Running
+> Last tested: **February 2026**
 
-To build or run the project, use one of the following tasks:
+### Core Components
 
-| Task                          | Description                                                          |
-| -------------------------------|---------------------------------------------------------------------- |
-| `./gradlew test`              | Run the tests                                                        |
-| `./gradlew build`             | Build everything                                                     |
-| `buildFatJar`                 | Build an executable JAR of the server with all dependencies included |
-| `buildImage`                  | Build the docker image to use with the fat JAR                       |
-| `publishImageToLocalRegistry` | Publish the docker image locally                                     |
-| `run`                         | Run the server                                                       |
-| `runDocker`                   | Run using the local docker image                                     |
+| Component           | Details                                                                 |
+|--------------------|-------------------------------------------------------------------------|
+| SBC                | Raspberry Pi 4 B+                                                       |
+| PWM Driver         | PCA9685 over I2C (default address `0x40`)                               |
+| Servo              | Etronix ES060                                                           |
+| ESC                | Surpass Hobby 25A sensorless brushless ESC (powered separately)         |
+| Motor              | Surpass Hobby 2430 Brushless                                            |
+| Power Supply       | Wanptek WPS3010H (lab PSU with adjustable current limit)                |
 
-If the server starts successfully, you'll see the following output:
+### Architecture
+main()
+├─ PCA9685 (1 instance)
+├─ ServoManager (channel 0) → steeringServo
+└─ MotorManager (channel 1) → ESC throttle
 
-```
-2024-12-04 14:32:45.584 [main] INFO  Application - Application started in 0.303 seconds.
-2024-12-04 14:32:45.682 [main] INFO  Application - Responding at http://0.0.0.0:8080
-```
+### ✅ Current Progress
 
+- ✅ Steering fully functional with ServoManager (angle tested)
+- ✅ ESC control verified (requires 1500 µs neutral → 1600 µs forward)
+- ✅ Diozero PCA9685 driver working correctly
+- ✅ Proper power sequencing implemented (ESC arming requires ~2 sec neutral)
+- ✅ PSU current limit set to avoid OCP triggers during motor spin-up
+
+---
+
+## ⚙️ Lab PSU Configuration (Wanptek WPS3010H)
+
+| Setting        | Value              | Note                                                |
+|----------------|--------------------|-----------------------------------------------------|
+| **Voltage**    | `7.4V`             | Emulates 2S LiPo battery                            |
+| **Current**    | `9A`               | Lower values (e.g. 2A) may cause ESC shutdown (OCP) |
+
+---
+
+## 🔌 PWM Timing Settings (PCA9685 @ 50Hz)
+
+| Signal Type     | Microseconds | Notes                                      |
+|-----------------|--------------|--------------------------------------------|
+| **Neutral**     | `1500 µs`    | Required to arm ESC (wait ~2 seconds)      |
+| **Forward**     | `1600 µs`    | ESC starts spinning the motor forward      |
+| **Reverse**     | `1400 µs`    | Reverse spin (optional, depending on ESC)  |
+
+---
+
+## 🚀 How to Run
+
+1. Power the ESC with 7.4V via Deans (T-plug).
+2. Boot the Raspberry Pi and run the Kotlin server (`main()`).
+3. Servo and ESC will be initialized.
+4. The ESC **must receive a neutral (1500 µs)** signal and **wait 2 seconds** to arm.
+5. Use `CarController.forwardThrottle()` to test forward motion.
+
+---
+
+## 🧯 Safety Tips
+
+- Always start with **neutralThrottle()** to arm ESC
+- Never exceed PSU current limit beyond motor rating
+- Disconnect servo power (V+) if unnecessary — some ESCs backfeed voltage
+- Monitor PSU for **OCP (Overcurrent Protection)** triggers during testing

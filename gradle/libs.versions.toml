@@ -1,0 +1,30 @@
+[versions]
+kotlin = "2.1.0"
+ktor = "3.1.2"
+diozero = "1.4.1"
+logback = "1.5.18"
+pi4j = "2.8.0"
+
+[libraries]
+ktor-server-core = { module = "io.ktor:ktor-server-core", version.ref = "ktor" }
+ktor-server-netty = { module = "io.ktor:ktor-server-netty", version.ref = "ktor" }
+ktor-server-websockets = { module = "io.ktor:ktor-server-websockets", version.ref = "ktor" }
+ktor-server-content-negotiation = { module = "io.ktor:ktor-server-content-negotiation", version.ref = "ktor" }
+ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktor" }
+
+diozero-core = { module = "com.diozero:diozero-core", version.ref = "diozero" }
+diozero-provider-pigpio = { module = "com.diozero:diozero-provider-pigpio", version.ref = "diozero" }
+
+logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
+
+pi4j-core = { module = "com.pi4j:pi4j-core", version.ref = "pi4j" }
+pi4j-plugin-raspberrypi = { module = "com.pi4j:pi4j-plugin-raspberrypi", version.ref = "pi4j" }
+
+[bundles]
+ktor = ["ktor-server-core", "ktor-server-netty", "ktor-server-websockets", "ktor-server-content-negotiation", "ktor-serialization-kotlinx-json"]
+diozero = ["diozero-core", "diozero-provider-pigpio"]
+pi4j = ["pi4j-core", "pi4j-plugin-raspberrypi"]
+
+[plugins]
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
