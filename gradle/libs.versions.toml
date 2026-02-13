@@ -4,13 +4,17 @@ ktor = "3.1.2"
 diozero = "1.4.1"
 logback = "1.5.18"
 pi4j = "2.8.0"
+koin = "4.0.0"
+mockk = "1.13.13"
 
 [libraries]
 ktor-server-core = { module = "io.ktor:ktor-server-core", version.ref = "ktor" }
 ktor-server-netty = { module = "io.ktor:ktor-server-netty", version.ref = "ktor" }
 ktor-server-websockets = { module = "io.ktor:ktor-server-websockets", version.ref = "ktor" }
 ktor-server-content-negotiation = { module = "io.ktor:ktor-server-content-negotiation", version.ref = "ktor" }
+ktor-server-config-yaml = { module = "io.ktor:ktor-server-config-yaml", version.ref = "ktor" }
 ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktor" }
+ktor-server-test-host = { module = "io.ktor:ktor-server-test-host", version.ref = "ktor" }
 
 diozero-core = { module = "com.diozero:diozero-core", version.ref = "diozero" }
 diozero-provider-pigpio = { module = "com.diozero:diozero-provider-pigpio", version.ref = "diozero" }
@@ -20,10 +24,20 @@ logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "lo
 pi4j-core = { module = "com.pi4j:pi4j-core", version.ref = "pi4j" }
 pi4j-plugin-raspberrypi = { module = "com.pi4j:pi4j-plugin-raspberrypi", version.ref = "pi4j" }
 
+koin-core = { module = "io.insert-koin:koin-core", version.ref = "koin" }
+koin-ktor = { module = "io.insert-koin:koin-ktor", version.ref = "koin" }
+koin-logger-slf4j = { module = "io.insert-koin:koin-logger-slf4j", version.ref = "koin" }
+koin-test = { module = "io.insert-koin:koin-test", version.ref = "koin" }
+
+kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
+mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
+
 [bundles]
-ktor = ["ktor-server-core", "ktor-server-netty", "ktor-server-websockets", "ktor-server-content-negotiation", "ktor-serialization-kotlinx-json"]
+ktor = ["ktor-server-core", "ktor-server-netty", "ktor-server-websockets", "ktor-server-content-negotiation", "ktor-server-config-yaml", "ktor-serialization-kotlinx-json"]
 diozero = ["diozero-core", "diozero-provider-pigpio"]
 pi4j = ["pi4j-core", "pi4j-plugin-raspberrypi"]
+koin = ["koin-core", "koin-ktor", "koin-logger-slf4j"]
+testing = ["kotlin-test", "mockk", "ktor-server-test-host", "koin-test"]
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

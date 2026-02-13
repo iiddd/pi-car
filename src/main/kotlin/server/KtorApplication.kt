@@ -1,29 +1,63 @@
 package server
 
-import com.diozero.api.I2CDevice
-import com.diozero.devices.PCA9685
+import io.ktor.serialization.kotlinx.json.*
+import io.ktor.server.application.*
+import io.ktor.server.engine.*
+import io.ktor.server.netty.*
+import io.ktor.server.plugins.contentnegotiation.*
+import io.ktor.server.routing.*
+import io.ktor.server.websocket.*
+import org.koin.ktor.ext.inject
+import org.koin.ktor.plugin.Koin
+import org.koin.logger.slf4jLogger
+import server.di.mockModule
+import server.di.productionModule
+import server.routes.setupDebugRoutes
+import server.routes.setupWebSocketRoutes
+import kotlin.time.Duration.Companion.seconds
+
 fun main() {
-    println("⚙️ ESC Test Program Starting...")
+    println("⚙️ Pi-Car Server Starting...")
 
-    val device = I2CDevice(1, PCA9685.DEFAULT_ADDRESS)
-    val pca9685 = PCA9685(device)
+    embeddedServer(Netty, port = 8080, host = "0.0.0.0") {
+        configureKoin()
+        configureSerialization()
+        configureWebSockets()
+        configureRouting()
+    }.start(wait = true)
+}
 
-    val motorChannel = 1
+fun Application.configureKoin() {
+    install(Koin) {
+        slf4jLogger()
+        // Use mock module if explicitly set, otherwise try production
+        modules(if (Config.mockMode) mockModule else productionModule)
+    }
+    println("✅ Koin DI initialized (mockMode: ${Config.mockMode})")
+}
 
-    // Step 1: Neutral pulse (arming)
-    println("🛑 Sending NEUTRAL pulse (1500 µs)")
-    pca9685.setDutyUs(motorChannel, 1500)
-    Thread.sleep(5000) // wait 5 sec for ESC to arm
+fun Application.configureSerialization() {
+    install(ContentNegotiation) {
+        json()
+    }
+}
 
-    // Step 2: Gentle throttle
-    println("🚀 Sending FORWARD throttle (1600 µs)")
-    pca9685.setDutyUs(motorChannel, 1600)
-    Thread.sleep(3000)
+fun Application.configureWebSockets() {
+    install(WebSockets) {
+        pingPeriod = 15.seconds
+        timeout = 15.seconds
+        maxFrameSize = Long.MAX_VALUE
+        masking = false
+    }
+}
 
-    // Step 3: Back to neutral
-    println("🛑 Sending NEUTRAL again (1500 µs)")
-    pca9685.setDutyUs(motorChannel, 1500)
-    Thread.sleep(3000)
+fun Application.configureRouting() {
+    val carController: CarController by inject()
 
-    println("✅ ESC Test Completed!")
+    routing {
+        setupDebugRoutes()
+        setupWebSocketRoutes(carController)
+    }
+
+    println("🚀 Pi-Car Server running on http://0.0.0.0:8080")
 }

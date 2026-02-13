@@ -10,7 +10,7 @@ group = "com.iiddd"
 version = "1.0.0"
 
 application {
-    mainClass.set("com.iiddd.server.MainKt")
+    mainClass.set("server.KtorApplicationKt")
 }
 
 repositories {
@@ -29,6 +29,16 @@ dependencies {
 
     // Pi4J dependencies
     implementation(libs.bundles.pi4j)
+
+    // Koin DI
+    implementation(libs.bundles.koin)
+
+    // Testing
+    testImplementation(libs.bundles.testing)
+}
+
+tasks.test {
+    useJUnitPlatform()
 }
 
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {

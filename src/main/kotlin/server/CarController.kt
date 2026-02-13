@@ -1,59 +1,70 @@
 package server
 
-import server.hardware.MotorManager
-import server.hardware.ServoManager
+import server.domain.ports.MotorController
+import server.domain.ports.SteeringController
 
+/**
+ * Main car controller orchestrating steering and motor operations.
+ * Depends on abstractions (interfaces) for testability.
+ */
 class CarController(
-    val servoManager: ServoManager,
-    val motorManager: MotorManager
+    private val steeringController: SteeringController,
+    private val motorController: MotorController,
+    registerShutdownHook: Boolean = true
 ) {
 
     init {
         println("⚙️ Initializing Car Controller...")
-        Runtime.getRuntime().addShutdownHook(Thread {
-            println("🛑 Shutdown hook triggered: Stopping motor and centering steering")
-            shutdown()
-        })
+        if (registerShutdownHook) {
+            Runtime.getRuntime().addShutdownHook(Thread {
+                println("🛑 Shutdown hook triggered: Stopping motor and centering steering")
+                shutdown()
+            })
+        }
         println("✅ Car Controller ready")
     }
 
     // --- 🛞 Steering Methods ---
     fun centerSteering() {
         println("🛞 Centering steering")
-        servoManager.centerSteering()
+        steeringController.center()
     }
 
     fun steerLeft() {
         println("↩️ Steering left")
-        servoManager.turnLeft()
+        steeringController.turnLeft()
     }
 
     fun steerRight() {
         println("↪️ Steering right")
-        servoManager.turnRight()
+        steeringController.turnRight()
+    }
+
+    fun setSteeringAngle(angle: Float) {
+        steeringController.setAngle(angle)
     }
 
     // --- 🚀 Throttle Methods ---
     fun setThrottlePercent(percent: Float) {
-        motorManager.setThrottle(percent)
+        motorController.setThrottle(percent)
     }
 
     fun neutralThrottle() {
-        motorManager.stopMotor()
+        motorController.stop()
     }
 
     fun forwardThrottle() {
-        motorManager.setThrottle(0.3f)
+        motorController.setThrottle(0.3f)
     }
 
     fun reverseThrottle() {
-        motorManager.setThrottle(-0.3f)
+        motorController.setThrottle(-0.3f)
     }
 
     // --- 🛑 Shutdown ---
     fun shutdown() {
         println("🛑 Shutting down CarController...")
-        motorManager.stopMotor()
-        servoManager.shutdown()
+        motorController.stop()
+        steeringController.shutdown()
     }
 }
