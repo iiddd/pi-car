@@ -21,14 +21,12 @@ dependencies {
     // Ktor dependencies
     implementation(libs.bundles.ktor)
 
-    // Diozero dependencies
+    // Diozero dependencies (PCA9685, I2C, PWM)
     implementation(libs.bundles.diozero)
 
     // Logging
     implementation(libs.logback.classic)
 
-    // Pi4J dependencies
-    implementation(libs.bundles.pi4j)
 
     // Koin DI
     implementation(libs.bundles.koin)
