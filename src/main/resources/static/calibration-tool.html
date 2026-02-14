@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pi-Car Calibration Tool</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .panel {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+        }
+
+        .panel h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .control-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        input[type="number"], input[type="range"] {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input[type="number"]:focus, input[type="range"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        input[type="range"] {
+            padding: 0;
+        }
+
+        .range-display {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 5px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button.danger {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        button.success {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .status {
+            padding: 12px;
+            border-radius: 6px;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status.show {
+            display: block;
+        }
+
+        .calibration-data {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            margin-top: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .quick-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏎️ Pi-Car Calibration Tool</h1>
+
+        <!-- Server Connection -->
+        <div class="panel">
+            <h2>🔌 Server Connection</h2>
+            <div class="control-group">
+                <label>Server URL (leave empty when accessing from Pi):</label>
+                <input type="text" id="serverUrl" value="" placeholder="e.g., http://REMOVED_IP:8080" />
+            </div>
+            <button onclick="loadCalibration()" class="success">📥 Load Current Config</button>
+            <button onclick="checkStatus()">🔍 Check Status</button>
+            <div id="connectionStatus" class="status"></div>
+            <div id="currentConfig" class="calibration-data" style="display: none;"></div>
+        </div>
+
+        <div class="grid">
+            <!-- Steering Calibration -->
+            <div class="panel">
+                <h2>🛞 Steering Calibration</h2>
+
+                <div class="control-group">
+                    <label>Angle (0-180°):</label>
+                    <input type="range" id="steeringAngle" min="0" max="180" value="120" oninput="updateRangeDisplay('steeringAngle', this.value)" />
+                    <div class="range-display">
+                        <span>0°</span>
+                        <span id="steeringAngleValue">120°</span>
+                        <span>180°</span>
+                    </div>
+                </div>
+
+                <div class="quick-actions">
+                    <button onclick="setSteeringAngle()">Set Angle</button>
+                    <button onclick="quickSteering('center')">Center</button>
+                    <button onclick="quickSteering('left')">Left</button>
+                    <button onclick="quickSteering('right')">Right</button>
+                </div>
+
+                <div class="control-group" style="margin-top: 20px;">
+                    <label>Center Angle:</label>
+                    <input type="number" id="centerAngle" value="120" step="0.5" />
+                </div>
+                <div class="control-group">
+                    <label>Left Angle:</label>
+                    <input type="number" id="leftAngle" value="90" step="0.5" />
+                </div>
+                <div class="control-group">
+                    <label>Right Angle:</label>
+                    <input type="number" id="rightAngle" value="150" step="0.5" />
+                </div>
+                <button onclick="updateServoCalibration()" class="success">💾 Save Steering Config</button>
+                <div id="steeringStatus" class="status"></div>
+            </div>
+
+            <!-- Motor Calibration -->
+            <div class="panel">
+                <h2>🚀 Motor Calibration</h2>
+
+                <div class="control-group">
+                    <label>Throttle (-100% to 100%):</label>
+                    <input type="range" id="throttle" min="-100" max="100" value="0" oninput="updateRangeDisplay('throttle', this.value)" />
+                    <div class="range-display">
+                        <span>-100%</span>
+                        <span id="throttleValue">0%</span>
+                        <span>100%</span>
+                    </div>
+                </div>
+
+                <div class="quick-actions">
+                    <button onclick="setThrottle()">Set Throttle</button>
+                    <button onclick="armESC()" class="success">🔧 Arm ESC (Neutral)</button>
+                    <button onclick="stopMotor()" class="danger">🛑 STOP</button>
+                </div>
+
+                <div class="control-group" style="margin-top: 20px;">
+                    <label>Neutral Pulse (µs):</label>
+                    <input type="number" id="neutralPulseUs" value="1500" step="10" />
+                </div>
+                <div class="control-group">
+                    <label>Forward Min Pulse (µs):</label>
+                    <input type="number" id="forwardMinPulseUs" value="1600" step="10" />
+                </div>
+                <div class="control-group">
+                    <label>Reverse Max Pulse (µs):</label>
+                    <input type="number" id="reverseMaxPulseUs" value="1400" step="10" />
+                </div>
+                <button onclick="updateMotorCalibration()" class="success">💾 Save Motor Config</button>
+                <div id="motorStatus" class="status"></div>
+            </div>
+        </div>
+
+        <!-- Advanced: Direct PWM Control -->
+        <div class="panel">
+            <h2>⚙️ Advanced: Direct PWM Control</h2>
+            <p style="color: #666; margin-bottom: 15px;">Set exact PWM pulse widths for fine-tuning</p>
+
+            <div class="grid">
+                <div class="control-group">
+                    <label>Channel:</label>
+                    <input type="number" id="pwmChannel" value="0" min="0" max="15" />
+                </div>
+                <div class="control-group">
+                    <label>Pulse Width (µs):</label>
+                    <input type="number" id="pwmPulse" value="1500" min="500" max="2500" step="10" />
+                </div>
+            </div>
+            <button onclick="setDirectPWM()">🎛️ Set Direct PWM</button>
+            <div id="pwmStatus" class="status"></div>
+        </div>
+
+        <!-- Instructions -->
+        <div class="panel">
+            <h2>📖 Quick Guide</h2>
+            <ol style="line-height: 2; color: #333;">
+                <li><strong>Load Config:</strong> Click "Load Current Config" to see your current settings</li>
+                <li><strong>Steering:</strong> Use the angle slider to test steering positions, then save your preferred values</li>
+                <li><strong>Motor:</strong> First ARM the ESC (click "Arm ESC"), wait 2-3 seconds, then test throttle</li>
+                <li><strong>Save:</strong> Once calibrated, update the values in <code>application.yaml</code></li>
+                <li><strong>Safety:</strong> Keep wheels off the ground! Use STOP button if anything goes wrong</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        function getServerUrl() {
+            return document.getElementById('serverUrl').value;
+        }
+
+        function showStatus(elementId, message, isSuccess) {
+            const status = document.getElementById(elementId);
+            status.textContent = message;
+            status.className = 'status show ' + (isSuccess ? 'success' : 'error');
+            setTimeout(() => {
+                status.classList.remove('show');
+            }, 5000);
+        }
+
+        function updateRangeDisplay(id, value) {
+            const display = document.getElementById(id + 'Value');
+            if (id === 'throttle') {
+                display.textContent = value + '%';
+            } else {
+                display.textContent = value + '°';
+            }
+        }
+
+        async function checkStatus() {
+            try {
+                const response = await fetch(`${getServerUrl()}/status`);
+                const data = await response.json();
+                showStatus('connectionStatus', `✅ Connected! Mock Mode: ${data.mockMode}`, true);
+            } catch (error) {
+                showStatus('connectionStatus', `❌ Connection failed: ${error.message}`, false);
+            }
+        }
+
+        async function loadCalibration() {
+            try {
+                const response = await fetch(`${getServerUrl()}/calibration`);
+                const data = await response.json();
+
+                // Update steering values
+                document.getElementById('centerAngle').value = data.servo.centerAngle;
+                document.getElementById('leftAngle').value = data.servo.leftAngle;
+                document.getElementById('rightAngle').value = data.servo.rightAngle;
+
+                // Update motor values
+                document.getElementById('neutralPulseUs').value = data.motor.neutralPulseUs;
+                document.getElementById('forwardMinPulseUs').value = data.motor.forwardMinPulseUs;
+                document.getElementById('reverseMaxPulseUs').value = data.motor.reverseMaxPulseUs;
+
+                // Display full config
+                const configDiv = document.getElementById('currentConfig');
+                configDiv.style.display = 'block';
+                configDiv.textContent = JSON.stringify(data, null, 2);
+
+                showStatus('connectionStatus', '✅ Configuration loaded successfully', true);
+            } catch (error) {
+                showStatus('connectionStatus', `❌ Failed to load config: ${error.message}`, false);
+            }
+        }
+
+        async function setSteeringAngle() {
+            const angle = parseFloat(document.getElementById('steeringAngle').value);
+            try {
+                const response = await fetch(`${getServerUrl()}/calibration/steering/angle`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ angle })
+                });
+                const message = await response.text();
+                showStatus('steeringStatus', message, response.ok);
+            } catch (error) {
+                showStatus('steeringStatus', `❌ Error: ${error.message}`, false);
+            }
+        }
+
+        async function quickSteering(action) {
+            try {
+                const response = await fetch(`${getServerUrl()}/calibration/steering/${action}`, {
+                    method: 'POST'
+                });
+                const message = await response.text();
+                showStatus('steeringStatus', message, response.ok);
+            } catch (error) {
+                showStatus('steeringStatus', `❌ Error: ${error.message}`, false);
+            }
+        }
+
+        async function setThrottle() {
+            const throttlePercent = parseFloat(document.getElementById('throttle').value) / 100;
+            try {
+                const response = await fetch(`${getServerUrl()}/calibration/motor/throttle`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ throttlePercent })
+                });
+                const message = await response.text();
+                showStatus('motorStatus', message, response.ok);
+            } catch (error) {
+                showStatus('motorStatus', `❌ Error: ${error.message}`, false);
+            }
+        }
+
+        async function armESC() {
+            showStatus('motorStatus', '⏳ Arming ESC... wait 2-3 seconds', true);
+            try {
+                const response = await fetch(`${getServerUrl()}/calibration/motor/stop`, {
+                    method: 'POST'
+                });
+                const message = await response.text();
+                setTimeout(() => {
+                    showStatus('motorStatus', '✅ ESC should be armed now (listen for beeps)', true);
+                }, 2500);
+            } catch (error) {
+                showStatus('motorStatus', `❌ Error: ${error.message}`, false);
+            }
+        }
+
+        async function stopMotor() {
+            try {
+                const response = await fetch(`${getServerUrl()}/calibration/motor/stop`, {
+                    method: 'POST'
+                });
+                const message = await response.text();
+                showStatus('motorStatus', message, response.ok);
+                // Reset throttle slider
+                document.getElementById('throttle').value = 0;
+                updateRangeDisplay('throttle', 0);
+            } catch (error) {
+                showStatus('motorStatus', `❌ Error: ${error.message}`, false);
+            }
+        }
+
+        async function updateServoCalibration() {
+            const centerAngle = parseFloat(document.getElementById('centerAngle').value);
+            const leftAngle = parseFloat(document.getElementById('leftAngle').value);
+            const rightAngle = parseFloat(document.getElementById('rightAngle').value);
+
+            try {
+                const response = await fetch(`${getServerUrl()}/calibration/steering`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ centerAngle, leftAngle, rightAngle })
+                });
+                const message = await response.text();
+                showStatus('steeringStatus', message, response.ok);
+            } catch (error) {
+                showStatus('steeringStatus', `❌ Error: ${error.message}`, false);
+            }
+        }
+
+        async function updateMotorCalibration() {
+            const neutralPulseUs = parseInt(document.getElementById('neutralPulseUs').value);
+            const forwardMinPulseUs = parseInt(document.getElementById('forwardMinPulseUs').value);
+            const reverseMaxPulseUs = parseInt(document.getElementById('reverseMaxPulseUs').value);
+
+            try {
+                const response = await fetch(`${getServerUrl()}/calibration/motor`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ neutralPulseUs, forwardMinPulseUs, reverseMaxPulseUs })
+                });
+                const message = await response.text();
+                showStatus('motorStatus', message, response.ok);
+            } catch (error) {
+                showStatus('motorStatus', `❌ Error: ${error.message}`, false);
+            }
+        }
+
+        async function setDirectPWM() {
+            const channel = parseInt(document.getElementById('pwmChannel').value);
+            const pulseUs = parseInt(document.getElementById('pwmPulse').value);
+
+            try {
+                const response = await fetch(`${getServerUrl()}/calibration/pulse`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ channel, pulseUs })
+                });
+                const message = await response.text();
+                showStatus('pwmStatus', message, response.ok);
+            } catch (error) {
+                showStatus('pwmStatus', `❌ Error: ${error.message}`, false);
+            }
+        }
+
+        // Load config on page load
+        window.addEventListener('load', () => {
+            checkStatus();
+        });
+    </script>
+</body>
+</html>
+
+

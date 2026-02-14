@@ -1,7 +1,5 @@
 package server.di
 
-import org.koin.core.module.dsl.singleOf
-import org.koin.dsl.bind
 import org.koin.dsl.module
 import server.CarController
 import server.Config
@@ -14,15 +12,58 @@ import server.infrastructure.hardware.MockPwmController
 import server.infrastructure.hardware.Pca9685PwmController
 
 /**
+ * Common dependencies (Motor, Steering, Car controllers).
+ * Defined as a function to be included in both production and mock modules.
+ * These depend on PwmController being already defined.
+ */
+private fun org.koin.core.module.Module.commonDependencies() {
+    // Motor Controller - using config values
+    single<MotorController> {
+        MotorManager(
+            pwmController = get(),
+            motorChannel = Config.motorConfig.channel,
+            minPulseUs = Config.motorConfig.minPulseUs,
+            maxPulseUs = Config.motorConfig.maxPulseUs,
+            neutralPulseUs = Config.motorConfig.neutralPulseUs
+        )
+    }
+
+    // Steering Controller - using config values
+    single<SteeringController> {
+        ServoManager(
+            pwmController = get(),
+            servoChannel = Config.servoConfig.channel,
+            minPulseUs = Config.servoConfig.minPulseUs,
+            maxPulseUs = Config.servoConfig.maxPulseUs,
+            minAngle = Config.servoConfig.minAngle,
+            maxAngle = Config.servoConfig.maxAngle,
+            centerAngle = Config.servoConfig.centerAngle,
+            leftAngle = Config.servoConfig.leftAngle,
+            rightAngle = Config.servoConfig.rightAngle
+        )
+    }
+
+    // Car Controller - explicit definition to handle default parameter
+    single {
+        CarController(
+            steeringController = get(),
+            motorController = get()
+            // registerShutdownHook defaults to true
+        )
+    }
+}
+
+/**
  * Koin DI module for production environment.
- * Uses real PCA9685 hardware controller.
+ * Uses real PCA9685 hardware controller with fallback to mock.
  */
 val productionModule = module {
-    // PWM Controller - real hardware
+    // PWM Controller - real hardware (MUST be defined first!)
     single<PwmController> {
         try {
             Pca9685PwmController(i2cBus = 1)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
+            // Catch Throwable because diozero throws ServiceConfigurationError (extends Error, not Exception)
             println("⚠️ Failed to initialize PCA9685: ${e.message}")
             println("🧪 Falling back to Mock PWM Controller")
             Config.mockMode = true
@@ -30,24 +71,8 @@ val productionModule = module {
         }
     }
 
-    // Motor Controller
-    single<MotorController> {
-        MotorManager(
-            pwmController = get(),
-            motorChannel = 1
-        )
-    }
-
-    // Steering Controller
-    single<SteeringController> {
-        ServoManager(
-            pwmController = get(),
-            servoChannel = 0
-        )
-    }
-
-    // Car Controller
-    singleOf(::CarController)
+    // Common dependencies (depend on PwmController)
+    commonDependencies()
 }
 
 /**
@@ -55,27 +80,11 @@ val productionModule = module {
  * Uses mock PWM controller for testing without hardware.
  */
 val mockModule = module {
-    // PWM Controller - mock
+    // PWM Controller - mock (MUST be defined first!)
     single<PwmController> { MockPwmController() }
 
-    // Motor Controller
-    single<MotorController> {
-        MotorManager(
-            pwmController = get(),
-            motorChannel = 1
-        )
-    }
-
-    // Steering Controller
-    single<SteeringController> {
-        ServoManager(
-            pwmController = get(),
-            servoChannel = 0
-        )
-    }
-
-    // Car Controller
-    singleOf(::CarController)
+    // Common dependencies (depend on PwmController)
+    commonDependencies()
 }
 
 /**

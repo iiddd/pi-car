@@ -17,6 +17,17 @@ repositories {
     mavenCentral()
 }
 
+// Force consistent Netty version to resolve conflicts between Ktor and Diozero
+val nettyVersion = "4.2.9.Final"
+configurations.all {
+    resolutionStrategy.eachDependency {
+        if (requested.group == "io.netty") {
+            useVersion(nettyVersion)
+            because("Align all Netty modules to the same version for Ktor compatibility")
+        }
+    }
+}
+
 dependencies {
     // Ktor dependencies
     implementation(libs.bundles.ktor)

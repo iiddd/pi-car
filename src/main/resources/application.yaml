@@ -2,3 +2,24 @@ ktor:
   deployment:
     port: 8080
     host: 0.0.0.0
+
+# Hardware calibration settings
+hardware:
+  servo:
+    channel: 0
+    minPulseUs: 1000
+    maxPulseUs: 2000
+    minAngle: 0.0
+    maxAngle: 180.0
+    centerAngle: 120.0
+    leftAngle: 90.0
+    rightAngle: 150.0
+
+  motor:
+    channel: 1
+    minPulseUs: 1000
+    maxPulseUs: 2000
+    neutralPulseUs: 1500
+    # Fine-tuning for ESC
+    forwardMinPulseUs: 1600  # Minimum pulse to start moving forward
+    reverseMaxPulseUs: 1400  # Maximum pulse for reverse (if supported)

@@ -1,10 +1,10 @@
 [versions]
-kotlin = "2.3.10"
-ktor = "3.4.0"
+kotlin = "2.0.21"
+ktor = "2.3.12"
 diozero = "1.4.1"
-logback = "1.5.29"
-koin = "4.1.1"
-mockk = "1.14.9"
+logback = "1.5.15"
+koin = "4.0.2"
+mockk = "1.13.13"
 
 [libraries]
 ktor-server-core = { module = "io.ktor:ktor-server-core", version.ref = "ktor" }
@@ -12,6 +12,7 @@ ktor-server-netty = { module = "io.ktor:ktor-server-netty", version.ref = "ktor"
 ktor-server-websockets = { module = "io.ktor:ktor-server-websockets", version.ref = "ktor" }
 ktor-server-content-negotiation = { module = "io.ktor:ktor-server-content-negotiation", version.ref = "ktor" }
 ktor-server-config-yaml = { module = "io.ktor:ktor-server-config-yaml", version.ref = "ktor" }
+ktor-server-cors = { module = "io.ktor:ktor-server-cors", version.ref = "ktor" }
 ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktor" }
 ktor-server-test-host = { module = "io.ktor:ktor-server-test-host", version.ref = "ktor" }
 
@@ -29,7 +30,7 @@ kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotl
 mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
 
 [bundles]
-ktor = ["ktor-server-core", "ktor-server-netty", "ktor-server-websockets", "ktor-server-content-negotiation", "ktor-server-config-yaml", "ktor-serialization-kotlinx-json"]
+ktor = ["ktor-server-core", "ktor-server-netty", "ktor-server-websockets", "ktor-server-content-negotiation", "ktor-server-config-yaml", "ktor-server-cors", "ktor-serialization-kotlinx-json"]
 diozero = ["diozero-core", "diozero-provider-pigpio"]
 koin = ["koin-core", "koin-ktor", "koin-logger-slf4j"]
 testing = ["kotlin-test", "mockk", "ktor-server-test-host", "koin-test"]
