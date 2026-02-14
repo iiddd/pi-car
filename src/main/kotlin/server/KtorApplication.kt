@@ -17,7 +17,6 @@ import server.data.config.HardwareConfig
 import server.di.mockModule
 import server.di.productionModule
 import server.domain.ports.MotorController
-import server.domain.ports.PwmController
 import server.domain.ports.SteeringController
 import server.infrastructure.hardware.SafePwmController
 import server.routes.setupCalibrationRoutes

@@ -1,9 +1,27 @@
 #!/bin/bash
 # Pi-Car Deployment Script
 # Deploys and runs the application on Raspberry Pi
+#
+# Configuration via environment variables:
+#   PI_HOST - SSH connection string (user@hostname)
+#   PI_PATH - Deployment path on Pi
+#
+# Example usage:
+#   PI_HOST=myuser@192.168.1.100 ./scripts/deploy.sh
+#   source .env && ./scripts/deploy.sh
 
-PI_HOST="${PI_HOST:-iiddd@REMOVED_IP}"
-PI_PATH="${PI_PATH:-/home/iiddd/IdeaProjects/pi-car}"
+if [ -z "$PI_HOST" ]; then
+    echo "❌ ERROR: PI_HOST environment variable is not set!"
+    echo ""
+    echo "Set it before running:"
+    echo "  export PI_HOST=user@pi-hostname"
+    echo ""
+    echo "Or create a .env file (see .env.example) and run:"
+    echo "  source .env && ./scripts/deploy.sh"
+    exit 1
+fi
+
+PI_PATH="${PI_PATH:-/home/$(echo $PI_HOST | cut -d@ -f1)/IdeaProjects/pi-car}"
 DEBUG_MODE="${1:-}"
 
 set -e

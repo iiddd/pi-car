@@ -1,7 +1,21 @@
 #!/bin/bash
 # Check Pi-Car status on Raspberry Pi
+#
+# Configuration via environment variables:
+#   PI_HOST - SSH connection string (user@hostname)
+#
+# Example: PI_HOST=myuser@192.168.1.100 ./scripts/status.sh
 
-PI_HOST="${PI_HOST:-iiddd@REMOVED_IP}"
+if [ -z "$PI_HOST" ]; then
+    echo "❌ ERROR: PI_HOST environment variable is not set!"
+    echo ""
+    echo "Set it before running:"
+    echo "  export PI_HOST=user@pi-hostname"
+    echo ""
+    echo "Or: source .env && ./scripts/status.sh"
+    exit 1
+fi
+
 PI_IP="${PI_HOST#*@}"
 
 echo "🔍 Checking Pi-Car status..."
