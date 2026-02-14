@@ -29,3 +29,13 @@ build
 .gradle
 .idea
 
+# Local environment configuration (contains Pi credentials)
+.env
+.env.local
+
+# SSH keys and sensitive files
+*.pem
+*.key
+id_rsa*
+*.ppk
+
