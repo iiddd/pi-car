@@ -114,8 +114,8 @@ The app will listen for debugger on port 5005.
 
 Edit `scripts/deploy.sh` to change Pi connection settings:
 ```bash
-PI_HOST="iiddd@REMOVED_IP"  # Your Pi SSH address
-PI_PATH="/home/iiddd/IdeaProjects/pi-car"  # Deployment path
+PI_HOST=# Your Pi SSH address
+PI_PATH=# Deployment path
 ```
 
 ---
@@ -127,7 +127,7 @@ The project includes a comprehensive calibration system to fine-tune your steeri
 ### Quick Start - Web UI
 
 1. Start the Pi-Car server (use **"Deploy to Pi"**)
-2. Open `http://REMOVED_IP:8080/` in your browser
+2. Open `http://PI_IP:8080/` in your browser
 3. The calibration tool loads automatically
 4. Use the sliders to test and adjust values
 5. Save your calibration settings

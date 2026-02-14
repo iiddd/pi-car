@@ -12,7 +12,7 @@ This guide will get your RC car perfectly calibrated in about 15 minutes.
 ## Step 1: Open the Calibration Tool (1 min)
 
 1. On your computer, open a web browser
-2. Navigate to `http://<pi-ip-address>:8080/` (e.g., `http://REMOVED_IP:8080/`)
+2. Navigate to `http://<pi-ip-address>:8080/`
 3. The calibration tool will load automatically
 4. Leave the "Server URL" field **empty** (it uses the same origin)
 
