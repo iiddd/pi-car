@@ -42,7 +42,7 @@ echo "🏃 Starting Pi-Car on Raspberry Pi..."
 if [ "$DEBUG_MODE" = "--debug" ] || [ "$DEBUG_MODE" = "-d" ]; then
     echo "🐛 Debug mode enabled on port 5005"
     echo "   Create 'Remote JVM Debug' configuration in IntelliJ:"
-    echo "   - Host: REMOVED_IP"
+    echo "   - Host: $PI_IP"
     echo "   - Port: 5005"
     ssh "$PI_HOST" "cd $PI_PATH && java -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005 -cp 'lib/*' server.KtorApplicationKt"
 else
