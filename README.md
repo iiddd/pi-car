@@ -68,13 +68,55 @@ main()
 
 ---
 
-## 🚀 How to Run
+## 🚀 Deployment & Running
 
-1. Power the ESC with 7.4V via Deans (T-plug).
-2. Boot the Raspberry Pi and run the Kotlin server (`main()`).
-3. Servo and ESC will be initialized.
-4. The ESC **must receive a neutral (1500 µs)** signal and **wait 2 seconds** to arm.
-5. Use `CarController.forwardThrottle()` to test forward motion.
+### Prerequisites
+- SSH access to your Raspberry Pi configured (password-less recommended)
+- `rsync` installed on your Mac
+
+### Using IntelliJ Run Configurations
+
+The project includes ready-to-use run configurations:
+
+| Configuration | Description |
+|---------------|-------------|
+| **Deploy to Pi** | Build, deploy, and run on Raspberry Pi |
+| **Deploy to Pi (Debug)** | Same as above, with remote debugging enabled |
+| **Stop Pi-Car** | Stop the running application on Pi |
+| **Pi-Car Status** | Check if app is running and test API |
+| **Pi-Car Remote Debug** | Attach debugger to running app |
+
+### Manual Deployment
+
+```bash
+# Build and deploy
+./scripts/deploy.sh
+
+# Deploy with debug enabled
+./scripts/deploy.sh --debug
+
+# Stop the app
+./scripts/stop.sh
+
+# Check status
+./scripts/status.sh
+```
+
+### Remote Debugging (Works without Ultimate!)
+
+1. Run **"Deploy to Pi (Debug)"** to start the app with debug agent
+2. Run **"Pi-Car Remote Debug"** to attach the debugger
+3. Set breakpoints in your code and debug as usual!
+
+The app will listen for debugger on port 5005.
+
+### Configuration
+
+Edit `scripts/deploy.sh` to change Pi connection settings:
+```bash
+PI_HOST="iiddd@REMOVED_IP"  # Your Pi SSH address
+PI_PATH="/home/iiddd/IdeaProjects/pi-car"  # Deployment path
+```
 
 ---
 
@@ -84,9 +126,9 @@ The project includes a comprehensive calibration system to fine-tune your steeri
 
 ### Quick Start - Web UI
 
-1. Start the Pi-Car server
-2. Open `docs/calibration-tool.html` in your browser
-3. Click "Load Current Config"
+1. Start the Pi-Car server (use **"Deploy to Pi"**)
+2. Open `http://REMOVED_IP:8080/` in your browser
+3. The calibration tool loads automatically
 4. Use the sliders to test and adjust values
 5. Save your calibration settings
 
@@ -140,6 +182,7 @@ Comprehensive documentation is available in the [`docs/`](./docs/) directory:
 - **[docs/QUICKSTART_CALIBRATION.md](./docs/QUICKSTART_CALIBRATION.md)** - 15-minute calibration guide
 - **[docs/CALIBRATION.md](./docs/CALIBRATION.md)** - Complete API reference
 - **[docs/PROJECT_ANALYSIS.md](./docs/PROJECT_ANALYSIS.md)** - Architecture analysis & recommendations
-- **[docs/calibration-tool.html](./docs/calibration-tool.html)** - Web-based calibration tool
+
+**Calibration Tool:** Access at `http://<pi-ip>:8080/` when server is running.
 
 Start with [docs/INDEX.md](./docs/INDEX.md) for a complete guide to all documentation.

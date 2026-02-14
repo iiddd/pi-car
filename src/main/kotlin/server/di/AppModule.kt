@@ -10,6 +10,29 @@ import server.hardware.MotorManager
 import server.hardware.ServoManager
 import server.infrastructure.hardware.MockPwmController
 import server.infrastructure.hardware.Pca9685PwmController
+import server.infrastructure.hardware.SafePwmController
+
+/**
+ * Creates a SafePwmController with channel limits from Config.
+ */
+private fun createSafePwmController(delegate: PwmController): SafePwmController {
+    val channelLimits = mapOf(
+        Config.servoConfig.channel to SafePwmController.ChannelLimits(
+            minPulseUs = Config.servoConfig.minPulseUs,
+            maxPulseUs = Config.servoConfig.maxPulseUs,
+            name = "Servo"
+        ),
+        Config.motorConfig.channel to SafePwmController.ChannelLimits(
+            minPulseUs = Config.motorConfig.minPulseUs,
+            maxPulseUs = Config.motorConfig.maxPulseUs,
+            name = "Motor"
+        )
+    )
+    println("🔒 SafePwmController initialized with limits:")
+    println("   Servo (ch${Config.servoConfig.channel}): ${Config.servoConfig.minPulseUs}-${Config.servoConfig.maxPulseUs} µs")
+    println("   Motor (ch${Config.motorConfig.channel}): ${Config.motorConfig.minPulseUs}-${Config.motorConfig.maxPulseUs} µs")
+    return SafePwmController(delegate, channelLimits)
+}
 
 /**
  * Common dependencies (Motor, Steering, Car controllers).
@@ -58,9 +81,9 @@ private fun org.koin.core.module.Module.commonDependencies() {
  * Uses real PCA9685 hardware controller with fallback to mock.
  */
 val productionModule = module {
-    // PWM Controller - real hardware (MUST be defined first!)
+    // Raw PWM Controller - real hardware with fallback
     single<PwmController> {
-        try {
+        val rawController = try {
             Pca9685PwmController(i2cBus = 1)
         } catch (e: Throwable) {
             // Catch Throwable because diozero throws ServiceConfigurationError (extends Error, not Exception)
@@ -69,7 +92,12 @@ val productionModule = module {
             Config.mockMode = true
             MockPwmController()
         }
+        // Wrap with SafePwmController for bounds checking
+        createSafePwmController(rawController)
     }
+
+    // Also provide SafePwmController directly for calibration endpoints
+    single<SafePwmController> { get<PwmController>() as SafePwmController }
 
     // Common dependencies (depend on PwmController)
     commonDependencies()
@@ -80,8 +108,11 @@ val productionModule = module {
  * Uses mock PWM controller for testing without hardware.
  */
 val mockModule = module {
-    // PWM Controller - mock (MUST be defined first!)
-    single<PwmController> { MockPwmController() }
+    // PWM Controller - mock wrapped with SafePwmController
+    single<PwmController> { createSafePwmController(MockPwmController()) }
+
+    // Also provide SafePwmController directly for calibration endpoints
+    single<SafePwmController> { get<PwmController>() as SafePwmController }
 
     // Common dependencies (depend on PwmController)
     commonDependencies()
@@ -92,7 +123,7 @@ val mockModule = module {
  * All dependencies can be easily mocked.
  */
 val testModule = module {
-    // In tests, you typically provide mocks via MockK
-    // This module is a starting point that can be overridden
-    single<PwmController> { MockPwmController() }
+    // In tests, we also enforce safety limits
+    single<PwmController> { createSafePwmController(MockPwmController()) }
+    single<SafePwmController> { get<PwmController>() as SafePwmController }
 }

@@ -7,7 +7,7 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import server.Config
 import server.data.calibration.*
-import server.domain.ports.PwmController
+import server.infrastructure.hardware.SafePwmController
 import server.domain.ports.SteeringController
 import server.domain.ports.MotorController
 
@@ -16,7 +16,7 @@ import server.domain.ports.MotorController
  * These endpoints allow real-time adjustment of servo and motor parameters.
  */
 fun Route.setupCalibrationRoutes(
-    pwmController: PwmController,
+    safePwmController: SafePwmController,
     steeringController: SteeringController,
     motorController: MotorController
 ) {
@@ -42,15 +42,18 @@ fun Route.setupCalibrationRoutes(
                     maxPulseUs = Config.motorConfig.maxPulseUs,
                     neutralPulseUs = Config.motorConfig.neutralPulseUs,
                     forwardMinPulseUs = Config.motorConfig.forwardMinPulseUs,
-                    reverseMaxPulseUs = Config.motorConfig.reverseMaxPulseUs
+                    forwardMaxPulseUs = Config.motorConfig.forwardMaxPulseUs,
+                    reverseMaxPulseUs = Config.motorConfig.reverseMaxPulseUs,
+                    reverseMinPulseUs = Config.motorConfig.reverseMinPulseUs
                 )
             )
             call.respond(response)
         }
 
-        // Set raw PWM pulse (direct hardware control)
+        // Set raw PWM pulse (direct hardware control - BYPASSES SAFETY LIMITS)
+        // This is intentional for calibration purposes only
         post("/pulse") {
-            println("🔧 POST /calibration/pulse - Setting raw PWM pulse")
+            println("🔧 POST /calibration/pulse - Setting raw PWM pulse (CALIBRATION MODE)")
             try {
                 val request = call.receive<SetPulseRequest>()
                 println("   Channel: ${request.channel}, Pulse: ${request.pulseUs}µs")
@@ -65,7 +68,8 @@ fun Route.setupCalibrationRoutes(
                     return@post
                 }
 
-                pwmController.setDutyUs(request.channel, request.pulseUs)
+                // Use unsafe method to bypass SafePwmController limits for calibration
+                safePwmController.unsafeSetDutyUs(request.channel, request.pulseUs)
                 call.respondText("✅ Set channel ${request.channel} to ${request.pulseUs}µs", status = HttpStatusCode.OK)
             } catch (e: Exception) {
                 println("❌ Error setting pulse: ${e.message}")
@@ -130,7 +134,9 @@ fun Route.setupCalibrationRoutes(
                     maxPulseUs = request.maxPulseUs,
                     neutralPulseUs = request.neutralPulseUs,
                     forwardMinPulseUs = request.forwardMinPulseUs,
-                    reverseMaxPulseUs = request.reverseMaxPulseUs
+                    forwardMaxPulseUs = request.forwardMaxPulseUs,
+                    reverseMaxPulseUs = request.reverseMaxPulseUs,
+                    reverseMinPulseUs = request.reverseMinPulseUs
                 )
                 call.respondText("✅ Motor calibration updated", status = HttpStatusCode.OK)
             } catch (e: Exception) {

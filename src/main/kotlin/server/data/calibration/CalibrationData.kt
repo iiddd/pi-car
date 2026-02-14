@@ -48,7 +48,9 @@ data class UpdateMotorCalibrationRequest(
     val maxPulseUs: Int? = null,
     val neutralPulseUs: Int? = null,
     val forwardMinPulseUs: Int? = null,
-    val reverseMaxPulseUs: Int? = null
+    val forwardMaxPulseUs: Int? = null,
+    val reverseMaxPulseUs: Int? = null,
+    val reverseMinPulseUs: Int? = null
 )
 
 /**
@@ -79,6 +81,8 @@ data class MotorCalibration(
     val maxPulseUs: Int,
     val neutralPulseUs: Int,
     val forwardMinPulseUs: Int,
-    val reverseMaxPulseUs: Int
+    val forwardMaxPulseUs: Int,
+    val reverseMaxPulseUs: Int,
+    val reverseMinPulseUs: Int
 )
 

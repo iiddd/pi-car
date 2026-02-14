@@ -237,18 +237,49 @@
                     <button onclick="stopMotor()" class="danger">🛑 STOP</button>
                 </div>
 
-                <div class="control-group" style="margin-top: 20px;">
-                    <label>Neutral Pulse (µs):</label>
-                    <input type="number" id="neutralPulseUs" value="1500" step="10" />
-                </div>
+                <h3 style="margin-top: 25px; margin-bottom: 15px; color: #667eea;">⚙️ Dead Zone Configuration</h3>
+                <p style="color: #666; margin-bottom: 15px; font-size: 14px;">
+                    Configure the pulse ranges for forward/reverse motion. The dead zone is between reverse max and forward min.
+                </p>
+
                 <div class="control-group">
-                    <label>Forward Min Pulse (µs):</label>
-                    <input type="number" id="forwardMinPulseUs" value="1600" step="10" />
+                    <label>Neutral Pulse (µs): <span style="color: #999;">center/arming position</span></label>
+                    <input type="number" id="neutralPulseUs" value="1500" step="5" />
                 </div>
-                <div class="control-group">
-                    <label>Reverse Max Pulse (µs):</label>
-                    <input type="number" id="reverseMaxPulseUs" value="1400" step="10" />
+
+                <div style="background: #e8f4e8; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                    <h4 style="color: #28a745; margin-bottom: 10px;">🔼 Forward Range</h4>
+                    <div class="control-group">
+                        <label>Forward Min Pulse (µs): <span style="color: #999;">motor starts moving forward</span></label>
+                        <input type="number" id="forwardMinPulseUs" value="1520" step="5" />
+                        <button onclick="testPulse('forwardMinPulseUs')" style="margin-top: 5px; padding: 6px 12px; font-size: 12px;">▶ Test</button>
+                    </div>
+                    <div class="control-group">
+                        <label>Forward Max Pulse (µs): <span style="color: #999;">full throttle forward</span></label>
+                        <input type="number" id="forwardMaxPulseUs" value="2000" step="10" />
+                        <button onclick="testPulse('forwardMaxPulseUs')" style="margin-top: 5px; padding: 6px 12px; font-size: 12px;">▶ Test</button>
+                    </div>
                 </div>
+
+                <div style="background: #ffeaea; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                    <h4 style="color: #dc3545; margin-bottom: 10px;">🔽 Reverse Range</h4>
+                    <div class="control-group">
+                        <label>Reverse Max Pulse (µs): <span style="color: #999;">motor starts moving reverse</span></label>
+                        <input type="number" id="reverseMaxPulseUs" value="1480" step="5" />
+                        <button onclick="testPulse('reverseMaxPulseUs')" style="margin-top: 5px; padding: 6px 12px; font-size: 12px;">▶ Test</button>
+                    </div>
+                    <div class="control-group">
+                        <label>Reverse Min Pulse (µs): <span style="color: #999;">full throttle reverse</span></label>
+                        <input type="number" id="reverseMinPulseUs" value="1000" step="10" />
+                        <button onclick="testPulse('reverseMinPulseUs')" style="margin-top: 5px; padding: 6px 12px; font-size: 12px;">▶ Test</button>
+                    </div>
+                </div>
+
+                <div style="background: #fff3cd; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 13px;">
+                    <strong>💡 Dead Zone:</strong>
+                    <span id="deadZoneDisplay">Reverse Max (1480) → Neutral (1500) → Forward Min (1520)</span>
+                </div>
+
                 <button onclick="updateMotorCalibration()" class="success">💾 Save Motor Config</button>
                 <div id="motorStatus" class="status"></div>
             </div>
@@ -332,7 +363,12 @@
                 // Update motor values
                 document.getElementById('neutralPulseUs').value = data.motor.neutralPulseUs;
                 document.getElementById('forwardMinPulseUs').value = data.motor.forwardMinPulseUs;
+                document.getElementById('forwardMaxPulseUs').value = data.motor.forwardMaxPulseUs;
                 document.getElementById('reverseMaxPulseUs').value = data.motor.reverseMaxPulseUs;
+                document.getElementById('reverseMinPulseUs').value = data.motor.reverseMinPulseUs;
+
+                // Update dead zone display
+                updateDeadZoneDisplay();
 
                 // Display full config
                 const configDiv = document.getElementById('currentConfig');
@@ -344,6 +380,19 @@
                 showStatus('connectionStatus', `❌ Failed to load config: ${error.message}`, false);
             }
         }
+
+        function updateDeadZoneDisplay() {
+            const neutral = document.getElementById('neutralPulseUs').value;
+            const fwdMin = document.getElementById('forwardMinPulseUs').value;
+            const revMax = document.getElementById('reverseMaxPulseUs').value;
+            document.getElementById('deadZoneDisplay').textContent =
+                `Reverse Max (${revMax}) → Neutral (${neutral}) → Forward Min (${fwdMin})`;
+        }
+
+        // Update dead zone display when values change
+        ['neutralPulseUs', 'forwardMinPulseUs', 'reverseMaxPulseUs'].forEach(id => {
+            document.getElementById(id)?.addEventListener('input', updateDeadZoneDisplay);
+        });
 
         async function setSteeringAngle() {
             const angle = parseFloat(document.getElementById('steeringAngle').value);
@@ -438,13 +487,21 @@
         async function updateMotorCalibration() {
             const neutralPulseUs = parseInt(document.getElementById('neutralPulseUs').value);
             const forwardMinPulseUs = parseInt(document.getElementById('forwardMinPulseUs').value);
+            const forwardMaxPulseUs = parseInt(document.getElementById('forwardMaxPulseUs').value);
             const reverseMaxPulseUs = parseInt(document.getElementById('reverseMaxPulseUs').value);
+            const reverseMinPulseUs = parseInt(document.getElementById('reverseMinPulseUs').value);
 
             try {
                 const response = await fetch(`${getServerUrl()}/calibration/motor`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ neutralPulseUs, forwardMinPulseUs, reverseMaxPulseUs })
+                    body: JSON.stringify({
+                        neutralPulseUs,
+                        forwardMinPulseUs,
+                        forwardMaxPulseUs,
+                        reverseMaxPulseUs,
+                        reverseMinPulseUs
+                    })
                 });
                 const message = await response.text();
                 showStatus('motorStatus', message, response.ok);
@@ -467,6 +524,23 @@
                 showStatus('pwmStatus', message, response.ok);
             } catch (error) {
                 showStatus('pwmStatus', `❌ Error: ${error.message}`, false);
+            }
+        }
+
+        async function testPulse(inputId) {
+            const pulseUs = parseInt(document.getElementById(inputId).value);
+            const motorChannel = 1; // Motor is typically on channel 1
+
+            try {
+                const response = await fetch(`${getServerUrl()}/calibration/pulse`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ channel: motorChannel, pulseUs: pulseUs })
+                });
+                const message = await response.text();
+                showStatus('motorStatus', `Testing ${pulseUs}µs: ${message}`, response.ok);
+            } catch (error) {
+                showStatus('motorStatus', `❌ Error: ${error.message}`, false);
             }
         }
 

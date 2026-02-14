@@ -4,6 +4,9 @@ import kotlinx.serialization.Serializable
 
 /**
  * Hardware configuration loaded from application.yaml
+ *
+ * SINGLE SOURCE OF TRUTH: All values MUST be defined in application.yaml.
+ * The application will fail to start if any required config is missing.
  */
 @Serializable
 data class HardwareConfig(
@@ -13,23 +16,25 @@ data class HardwareConfig(
 
 @Serializable
 data class ServoConfig(
-    val channel: Int = 0,
-    val minPulseUs: Int = 1000,
-    val maxPulseUs: Int = 2000,
-    val minAngle: Float = 0f,
-    val maxAngle: Float = 180f,
-    val centerAngle: Float = 120f,
-    val leftAngle: Float = 90f,
-    val rightAngle: Float = 150f
+    val channel: Int,
+    val minPulseUs: Int,
+    val maxPulseUs: Int,
+    val minAngle: Float,
+    val maxAngle: Float,
+    val centerAngle: Float,
+    val leftAngle: Float,
+    val rightAngle: Float
 )
 
 @Serializable
 data class MotorConfig(
-    val channel: Int = 1,
-    val minPulseUs: Int = 1000,
-    val maxPulseUs: Int = 2000,
-    val neutralPulseUs: Int = 1500,
-    val forwardMinPulseUs: Int = 1600,
-    val reverseMaxPulseUs: Int = 1400
+    val channel: Int,
+    val minPulseUs: Int,
+    val maxPulseUs: Int,
+    val neutralPulseUs: Int,
+    // Dead zone configuration
+    val forwardMinPulseUs: Int,   // Where motor starts moving forward
+    val forwardMaxPulseUs: Int,   // Full throttle forward
+    val reverseMaxPulseUs: Int,   // Where motor starts moving reverse
+    val reverseMinPulseUs: Int    // Full throttle reverse
 )
-

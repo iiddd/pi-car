@@ -8,7 +8,6 @@ import io.ktor.server.http.content.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.cors.routing.*
-import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
 import org.koin.ktor.ext.inject
@@ -20,6 +19,7 @@ import server.di.productionModule
 import server.domain.ports.MotorController
 import server.domain.ports.PwmController
 import server.domain.ports.SteeringController
+import server.infrastructure.hardware.SafePwmController
 import server.routes.setupCalibrationRoutes
 import server.routes.setupDebugRoutes
 import server.routes.setupWebSocketRoutes
@@ -27,14 +27,32 @@ import server.routes.setupWebSocketRoutes
 fun main() {
     println("⚙️ Pi-Car Server Starting...")
 
-    embeddedServer(Netty, port = 8080, host = "0.0.0.0") {
-        loadHardwareConfig()
-        configureKoin()
-        configureCORS()
-        configureSerialization()
-        configureWebSockets()
-        configureRouting()
-    }.start(wait = true)
+    // Load YAML config explicitly
+    val yamlConfig = io.ktor.server.config.yaml.YamlConfig("application.yaml")
+    if (yamlConfig == null) {
+        System.err.println("❌ FATAL: Could not find application.yaml!")
+        System.err.println("   Ensure application.yaml exists in src/main/resources/")
+        throw IllegalStateException("application.yaml not found")
+    }
+
+    embeddedServer(
+        Netty,
+        environment = applicationEngineEnvironment {
+            config = yamlConfig
+            connector {
+                port = 8080
+                host = "0.0.0.0"
+            }
+            module {
+                loadHardwareConfig()
+                configureKoin()
+                configureCORS()
+                configureSerialization()
+                configureWebSockets()
+                configureRouting()
+            }
+        }
+    ).start(wait = true)
 }
 
 /**
@@ -54,35 +72,47 @@ fun Application.configureCORS() {
 
 /**
  * Load hardware configuration from application.yaml
+ *
+ * FAIL FAST: The application will terminate if config cannot be loaded.
+ * All hardware parameters MUST be defined in application.yaml.
  */
 fun Application.loadHardwareConfig() {
     try {
-        val hardwareConfig = environment.config.config("hardware").let { config ->
-            HardwareConfig(
-                servo = server.data.config.ServoConfig(
-                    channel = config.property("servo.channel").getString().toInt(),
-                    minPulseUs = config.property("servo.minPulseUs").getString().toInt(),
-                    maxPulseUs = config.property("servo.maxPulseUs").getString().toInt(),
-                    minAngle = config.property("servo.minAngle").getString().toFloat(),
-                    maxAngle = config.property("servo.maxAngle").getString().toFloat(),
-                    centerAngle = config.property("servo.centerAngle").getString().toFloat(),
-                    leftAngle = config.property("servo.leftAngle").getString().toFloat(),
-                    rightAngle = config.property("servo.rightAngle").getString().toFloat()
-                ),
-                motor = server.data.config.MotorConfig(
-                    channel = config.property("motor.channel").getString().toInt(),
-                    minPulseUs = config.property("motor.minPulseUs").getString().toInt(),
-                    maxPulseUs = config.property("motor.maxPulseUs").getString().toInt(),
-                    neutralPulseUs = config.property("motor.neutralPulseUs").getString().toInt(),
-                    forwardMinPulseUs = config.property("motor.forwardMinPulseUs").getString().toInt(),
-                    reverseMaxPulseUs = config.property("motor.reverseMaxPulseUs").getString().toInt()
-                )
+        val hardwareConfig = environment.config.config("hardware")
+        val servoConfig = hardwareConfig.config("servo")
+        val motorConfig = hardwareConfig.config("motor")
+
+        val config = HardwareConfig(
+            servo = server.data.config.ServoConfig(
+                channel = servoConfig.property("channel").getString().toInt(),
+                minPulseUs = servoConfig.property("minPulseUs").getString().toInt(),
+                maxPulseUs = servoConfig.property("maxPulseUs").getString().toInt(),
+                minAngle = servoConfig.property("minAngle").getString().toFloat(),
+                maxAngle = servoConfig.property("maxAngle").getString().toFloat(),
+                centerAngle = servoConfig.property("centerAngle").getString().toFloat(),
+                leftAngle = servoConfig.property("leftAngle").getString().toFloat(),
+                rightAngle = servoConfig.property("rightAngle").getString().toFloat()
+            ),
+            motor = server.data.config.MotorConfig(
+                channel = motorConfig.property("channel").getString().toInt(),
+                minPulseUs = motorConfig.property("minPulseUs").getString().toInt(),
+                maxPulseUs = motorConfig.property("maxPulseUs").getString().toInt(),
+                neutralPulseUs = motorConfig.property("neutralPulseUs").getString().toInt(),
+                forwardMinPulseUs = motorConfig.property("forwardMinPulseUs").getString().toInt(),
+                forwardMaxPulseUs = motorConfig.property("forwardMaxPulseUs").getString().toInt(),
+                reverseMaxPulseUs = motorConfig.property("reverseMaxPulseUs").getString().toInt(),
+                reverseMinPulseUs = motorConfig.property("reverseMinPulseUs").getString().toInt()
             )
-        }
-        Config.loadHardwareConfig(hardwareConfig)
+        )
+        Config.loadHardwareConfig(config)
     } catch (e: Exception) {
-        println("⚠️ Failed to load hardware config from YAML: ${e.message}")
-        println("🔧 Using default hardware configuration")
+        System.err.println("❌ FATAL: Failed to load hardware config from application.yaml!")
+        System.err.println("   Error: ${e.message}")
+        System.err.println("")
+        System.err.println("   All hardware configuration MUST be defined in application.yaml.")
+        System.err.println("   Please ensure the file exists and contains all required properties.")
+        System.err.println("")
+        throw IllegalStateException("Cannot start without valid hardware configuration", e)
     }
 }
 
@@ -112,14 +142,14 @@ fun Application.configureWebSockets() {
 
 fun Application.configureRouting() {
     val carController: CarController by inject()
-    val pwmController: PwmController by inject()
+    val safePwmController: SafePwmController by inject()
     val steeringController: SteeringController by inject()
     val motorController: MotorController by inject()
 
     routing {
         // API routes first (more specific)
         setupDebugRoutes()
-        setupCalibrationRoutes(pwmController, steeringController, motorController)
+        setupCalibrationRoutes(safePwmController, steeringController, motorController)
         setupWebSocketRoutes(carController)
 
         // Serve static files from resources/static at root

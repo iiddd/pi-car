@@ -6,24 +6,57 @@ import server.data.config.ServoConfig
 
 /**
  * Global configuration object.
- * Hardware config can be loaded from YAML and updated at runtime for calibration.
+ *
+ * SINGLE SOURCE OF TRUTH: All hardware config MUST be loaded from application.yaml.
+ * The application will fail to start if config is not loaded before accessing.
  */
 object Config {
     var mockMode: Boolean = false
 
-    // Hardware configuration with mutable values for runtime calibration
-    var servoConfig: ServoConfig = ServoConfig()
-    var motorConfig: MotorConfig = MotorConfig()
+    // Track if config has been loaded
+    private var _configLoaded: Boolean = false
+
+    // Private backing fields - will throw if accessed before loading
+    private var _servoConfig: ServoConfig? = null
+    private var _motorConfig: MotorConfig? = null
+
+    /**
+     * Servo configuration from application.yaml.
+     * @throws IllegalStateException if config has not been loaded
+     */
+    var servoConfig: ServoConfig
+        get() = _servoConfig ?: throw IllegalStateException(
+            "❌ Config not loaded! Ensure application.yaml is present and loadHardwareConfig() is called before accessing servoConfig"
+        )
+        set(value) { _servoConfig = value }
+
+    /**
+     * Motor configuration from application.yaml.
+     * @throws IllegalStateException if config has not been loaded
+     */
+    var motorConfig: MotorConfig
+        get() = _motorConfig ?: throw IllegalStateException(
+            "❌ Config not loaded! Ensure application.yaml is present and loadHardwareConfig() is called before accessing motorConfig"
+        )
+        set(value) { _motorConfig = value }
+
+    /**
+     * Check if hardware config has been loaded.
+     */
+    val isConfigLoaded: Boolean get() = _configLoaded
 
     /**
      * Load hardware configuration from parsed YAML config.
+     * This MUST be called before accessing servoConfig or motorConfig.
      */
     fun loadHardwareConfig(hardwareConfig: HardwareConfig) {
-        servoConfig = hardwareConfig.servo
-        motorConfig = hardwareConfig.motor
-        println("✅ Hardware config loaded:")
-        println("   Servo: channel=${servoConfig.channel}, center=${servoConfig.centerAngle}°")
-        println("   Motor: channel=${motorConfig.channel}, neutral=${motorConfig.neutralPulseUs}µs")
+        _servoConfig = hardwareConfig.servo
+        _motorConfig = hardwareConfig.motor
+        _configLoaded = true
+        println("✅ Hardware config loaded from application.yaml:")
+        println("   Servo: channel=${servoConfig.channel}, limits=${servoConfig.minPulseUs}-${servoConfig.maxPulseUs}µs, center=${servoConfig.centerAngle}°")
+        println("   Motor: channel=${motorConfig.channel}, limits=${motorConfig.minPulseUs}-${motorConfig.maxPulseUs}µs, neutral=${motorConfig.neutralPulseUs}µs")
+        println("   Motor dead zone: reverse=${motorConfig.reverseMaxPulseUs}µs ← neutral → forward=${motorConfig.forwardMinPulseUs}µs")
     }
 
     /**
@@ -54,16 +87,19 @@ object Config {
         maxPulseUs: Int? = null,
         neutralPulseUs: Int? = null,
         forwardMinPulseUs: Int? = null,
-        reverseMaxPulseUs: Int? = null
+        forwardMaxPulseUs: Int? = null,
+        reverseMaxPulseUs: Int? = null,
+        reverseMinPulseUs: Int? = null
     ) {
         motorConfig = motorConfig.copy(
             minPulseUs = minPulseUs ?: motorConfig.minPulseUs,
             maxPulseUs = maxPulseUs ?: motorConfig.maxPulseUs,
             neutralPulseUs = neutralPulseUs ?: motorConfig.neutralPulseUs,
             forwardMinPulseUs = forwardMinPulseUs ?: motorConfig.forwardMinPulseUs,
-            reverseMaxPulseUs = reverseMaxPulseUs ?: motorConfig.reverseMaxPulseUs
+            forwardMaxPulseUs = forwardMaxPulseUs ?: motorConfig.forwardMaxPulseUs,
+            reverseMaxPulseUs = reverseMaxPulseUs ?: motorConfig.reverseMaxPulseUs,
+            reverseMinPulseUs = reverseMinPulseUs ?: motorConfig.reverseMinPulseUs
         )
         println("🔧 Motor calibration updated: $motorConfig")
     }
 }
-

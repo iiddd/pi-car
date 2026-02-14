@@ -7,8 +7,8 @@ ktor:
 hardware:
   servo:
     channel: 0
-    minPulseUs: 1000
-    maxPulseUs: 2000
+    minPulseUs: 1200
+    maxPulseUs: 1800
     minAngle: 0.0
     maxAngle: 180.0
     centerAngle: 120.0
@@ -17,9 +17,13 @@ hardware:
 
   motor:
     channel: 1
-    minPulseUs: 1000
-    maxPulseUs: 2000
+    minPulseUs: 1300
+    maxPulseUs: 1700
     neutralPulseUs: 1500
-    # Fine-tuning for ESC
-    forwardMinPulseUs: 1600  # Minimum pulse to start moving forward
-    reverseMaxPulseUs: 1400  # Maximum pulse for reverse (if supported)
+    # Dead zone calibration - adjust these values based on your ESC
+    # Forward range: forwardMinPulseUs to forwardMaxPulseUs
+    forwardMinPulseUs: 1590   # Where motor starts moving forward (dead zone ends)
+    forwardMaxPulseUs: 1700   # Full throttle forward
+    # Reverse range: reverseMinPulseUs to reverseMaxPulseUs
+    reverseMaxPulseUs: 1410   # Where motor starts moving reverse (dead zone ends)
+    reverseMinPulseUs: 1300   # Full throttle reverse
