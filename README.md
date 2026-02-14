@@ -176,13 +176,8 @@ After calibration, update these values and restart the server.
 
 ## 📚 Documentation
 
-Comprehensive documentation is available in the [`docs/`](./docs/) directory:
+- **[docs/QUICKSTART_CALIBRATION.md](./docs/QUICKSTART_CALIBRATION.md)** - 15-minute calibration quick start
+- **[docs/CALIBRATION.md](./docs/CALIBRATION.md)** - Complete calibration API reference
+- **[docs/SECURITY.md](./docs/SECURITY.md)** - Security setup guide (credentials & SSH keys)
 
-- **[docs/INDEX.md](./docs/INDEX.md)** - Documentation navigation hub
-- **[docs/QUICKSTART_CALIBRATION.md](./docs/QUICKSTART_CALIBRATION.md)** - 15-minute calibration guide
-- **[docs/CALIBRATION.md](./docs/CALIBRATION.md)** - Complete API reference
-- **[docs/PROJECT_ANALYSIS.md](./docs/PROJECT_ANALYSIS.md)** - Architecture analysis & recommendations
-
-**Calibration Tool:** Access at `http://<pi-ip>:8080/` when server is running.
-
-Start with [docs/INDEX.md](./docs/INDEX.md) for a complete guide to all documentation.
+**Calibration Tool:** Open your browser to `http://<pi-ip>:8080/` when the server is running.
