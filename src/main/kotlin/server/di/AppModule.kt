@@ -3,6 +3,10 @@ package server.di
 import org.koin.dsl.module
 import server.CarController
 import server.Config
+import server.control.ControlLoop
+import server.control.MockPwmOutput
+import server.control.PwmOutput
+import server.control.RealPwmOutput
 import server.domain.ports.MotorController
 import server.domain.ports.PwmController
 import server.domain.ports.SteeringController
@@ -58,11 +62,9 @@ private fun org.koin.core.module.Module.commonDependencies() {
             servoChannel = Config.servoConfig.channel,
             minPulseUs = Config.servoConfig.minPulseUs,
             maxPulseUs = Config.servoConfig.maxPulseUs,
-            minAngle = Config.servoConfig.minAngle,
-            maxAngle = Config.servoConfig.maxAngle,
-            centerAngle = Config.servoConfig.centerAngle,
-            leftAngle = Config.servoConfig.leftAngle,
-            rightAngle = Config.servoConfig.rightAngle
+            centerPulseUs = Config.servoConfig.centerPulseUs,
+            leftPulseUs = Config.servoConfig.leftPulseUs,
+            rightPulseUs = Config.servoConfig.rightPulseUs
         )
     }
 
@@ -74,6 +76,9 @@ private fun org.koin.core.module.Module.commonDependencies() {
             // registerShutdownHook defaults to true
         )
     }
+
+    // Control Loop for GTA-style driving
+    single { ControlLoop(pwmOutput = get()) }
 }
 
 /**
@@ -99,6 +104,15 @@ val productionModule = module {
     // Also provide SafePwmController directly for calibration endpoints
     single<SafePwmController> { get<PwmController>() as SafePwmController }
 
+    // PwmOutput for control loop - uses SafePwmController
+    single<PwmOutput> {
+        if (Config.mockMode) {
+            MockPwmOutput()
+        } else {
+            RealPwmOutput(get())
+        }
+    }
+
     // Common dependencies (depend on PwmController)
     commonDependencies()
 }
@@ -113,6 +127,9 @@ val mockModule = module {
 
     // Also provide SafePwmController directly for calibration endpoints
     single<SafePwmController> { get<PwmController>() as SafePwmController }
+
+    // PwmOutput for control loop - mock
+    single<PwmOutput> { MockPwmOutput() }
 
     // Common dependencies (depend on PwmController)
     commonDependencies()

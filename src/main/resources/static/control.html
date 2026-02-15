@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Pi-Car Remote Control</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #0a0a0a;
+            color: white;
+            min-height: 100vh;
+            overflow: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            grid-template-rows: auto 1fr auto;
+            height: 100vh;
+            gap: 10px;
+            padding: 10px;
+        }
+
+        /* Header */
+        .header {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+        }
+
+        .header h1 { font-size: 1.5rem; color: #e94560; }
+        .connection-status { display: flex; align-items: center; gap: 8px; }
+        .status-dot {
+            width: 12px; height: 12px;
+            border-radius: 50%;
+            background: #666;
+        }
+        .status-dot.connected { background: #4ade80; }
+        .status-dot.stale { background: #fbbf24; }
+        .status-dot.disconnected { background: #f87171; }
+
+        /* Video Feed */
+        .video-section {
+            background: #000;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .video-placeholder {
+            position: absolute;
+            color: #444;
+            text-align: center;
+            z-index: 10;
+            display: none;
+        }
+
+        .video-placeholder.visible {
+            display: block;
+        }
+
+        .video-placeholder .icon { font-size: 4rem; margin-bottom: 10px; }
+
+        #videoFrame {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: #000;
+        }
+
+        #videoFeed {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            display: none;
+        }
+
+        /* Telemetry Panel */
+        .telemetry-panel {
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .telemetry-section h3 {
+            color: #888;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+
+        .gauge {
+            background: #1a1a1a;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 8px;
+        }
+
+        .gauge-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 6px;
+            font-size: 0.85rem;
+        }
+
+        .gauge-bar {
+            height: 8px;
+            background: #333;
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .gauge-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.05s, left 0.05s;
+            position: absolute;
+        }
+
+        .gauge-fill.speed { background: linear-gradient(90deg, #4ade80, #22c55e); }
+        .gauge-fill.speed.reverse { background: linear-gradient(90deg, #f87171, #ef4444); }
+        .gauge-fill.steer { background: linear-gradient(90deg, #60a5fa, #3b82f6); }
+
+        .gauge-center {
+            position: absolute;
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #555;
+            transform: translateX(-50%);
+        }
+
+        .pulse-display {
+            display: flex;
+            justify-content: space-between;
+            font-family: monospace;
+            font-size: 0.9rem;
+            padding: 8px;
+            background: #1a1a1a;
+            border-radius: 6px;
+        }
+
+        /* Controls Section */
+        .controls-section {
+            grid-column: 1 / -1;
+            display: flex;
+            gap: 20px;
+            align-items: stretch;
+        }
+
+        /* Touch Controls */
+        .touch-controls {
+            display: flex;
+            gap: 10px;
+            flex: 1;
+        }
+
+        .control-pad {
+            display: grid;
+            grid-template-columns: repeat(3, 60px);
+            grid-template-rows: repeat(3, 60px);
+            gap: 5px;
+        }
+
+        .control-btn {
+            background: rgba(255,255,255,0.1);
+            border: 2px solid rgba(255,255,255,0.2);
+            border-radius: 10px;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: all 0.1s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .control-btn:hover { background: rgba(255,255,255,0.15); }
+        .control-btn.active {
+            background: rgba(233, 69, 96, 0.5);
+            border-color: #e94560;
+            transform: scale(0.95);
+        }
+
+        .control-btn.deadman {
+            grid-column: 1 / -1;
+            background: rgba(74, 222, 128, 0.2);
+            border-color: rgba(74, 222, 128, 0.5);
+            font-size: 1rem;
+        }
+
+        .control-btn.deadman.active {
+            background: rgba(74, 222, 128, 0.5);
+            border-color: #4ade80;
+        }
+
+        /* Sliders */
+        .slider-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .slider-group {
+            background: rgba(255,255,255,0.05);
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        .slider-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+            color: #888;
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        input[type="range"] {
+            flex: 1;
+            height: 8px;
+            -webkit-appearance: none;
+            background: #333;
+            border-radius: 4px;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #e94560;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .slider-value {
+            width: 50px;
+            text-align: right;
+            font-family: monospace;
+        }
+
+        /* Instructions */
+        .instructions {
+            background: rgba(255,255,255,0.03);
+            padding: 15px;
+            border-radius: 10px;
+            flex: 0 0 auto;
+        }
+
+        .instructions h4 {
+            color: #888;
+            font-size: 0.8rem;
+            margin-bottom: 8px;
+        }
+
+        .key-hint {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            margin: 3px 5px 3px 0;
+            font-size: 0.85rem;
+        }
+
+        .key {
+            background: #333;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-family: monospace;
+            min-width: 28px;
+            text-align: center;
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto auto 1fr auto;
+            }
+
+            .telemetry-panel {
+                order: 2;
+                flex-direction: row;
+                flex-wrap: wrap;
+            }
+
+            .video-section { order: 1; min-height: 200px; }
+            .controls-section { order: 3; flex-direction: column; }
+            .instructions { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <a href="/" style="color: #888; text-decoration: none; padding: 8px 16px; background: rgba(255,255,255,0.05); border-radius: 6px;">← Home</a>
+            <h1>🏎️ Pi-Car Remote</h1>
+            <div class="connection-status">
+                <span id="statusText">Connecting...</span>
+                <div id="statusDot" class="status-dot"></div>
+            </div>
+            <a href="calibration-tool.html" style="color: #888; text-decoration: none; padding: 8px 16px; background: rgba(255,255,255,0.05); border-radius: 6px;">🔧 Calibrate</a>
+        </div>
+
+        <!-- Video Feed -->
+        <div class="video-section">
+            <iframe id="videoFrame" src="" allow="autoplay"></iframe>
+            <div class="video-placeholder visible" id="videoPlaceholder">
+                <div class="icon">📷</div>
+                <div>Connecting to camera...</div>
+                <div style="font-size: 0.8rem; margin-top: 5px;">
+                    WebRTC feed on port 8889
+                </div>
+            </div>
+        </div>
+
+        <!-- Telemetry Panel -->
+        <div class="telemetry-panel">
+            <div class="telemetry-section">
+                <h3>Speed</h3>
+                <div class="gauge">
+                    <div class="gauge-label">
+                        <span id="speedDirection">Neutral</span>
+                        <span id="speedValue">0%</span>
+                    </div>
+                    <div class="gauge-bar">
+                        <div class="gauge-center"></div>
+                        <div id="speedFill" class="gauge-fill speed" style="width: 0; left: 50%;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="telemetry-section">
+                <h3>Steering</h3>
+                <div class="gauge">
+                    <div class="gauge-label">
+                        <span id="steerDirection">Center</span>
+                        <span id="steerValue">0%</span>
+                    </div>
+                    <div class="gauge-bar">
+                        <div class="gauge-center"></div>
+                        <div id="steerFill" class="gauge-fill steer" style="width: 0; left: 50%;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="telemetry-section">
+                <h3>PWM Output</h3>
+                <div class="pulse-display">
+                    <span>ESC:</span>
+                    <span id="escPulse">1500 µs</span>
+                </div>
+                <div class="pulse-display" style="margin-top: 5px;">
+                    <span>Steer:</span>
+                    <span id="steerPulse">1500 µs</span>
+                </div>
+            </div>
+
+            <div class="telemetry-section">
+                <h3>Status</h3>
+                <div style="font-size: 0.9rem;">
+                    <div id="deadmanStatus" style="color: #f87171;">⚠️ Hold SPACE to enable</div>
+                    <div id="staleStatus" style="color: #888; margin-top: 5px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Controls Section -->
+        <div class="controls-section">
+            <!-- Touch Controls -->
+            <div class="touch-controls">
+                <div class="control-pad">
+                    <div></div>
+                    <button class="control-btn" id="btnW" data-key="w">W</button>
+                    <div></div>
+                    <button class="control-btn" id="btnA" data-key="a">A</button>
+                    <button class="control-btn" id="btnS" data-key="s">S</button>
+                    <button class="control-btn" id="btnD" data-key="d">D</button>
+                    <button class="control-btn deadman" id="btnDeadman">🔓 HOLD TO DRIVE (SPACE)</button>
+                </div>
+            </div>
+
+            <!-- Sliders -->
+            <div class="slider-section">
+                <div class="slider-group">
+                    <label>Throttle (Analog)</label>
+                    <div class="slider-container">
+                        <span>-100%</span>
+                        <input type="range" id="throttleSlider" min="-100" max="100" value="0">
+                        <span>100%</span>
+                        <span class="slider-value" id="throttleValue">0%</span>
+                    </div>
+                </div>
+                <div class="slider-group">
+                    <label>Steering (Analog)</label>
+                    <div class="slider-container">
+                        <span>L</span>
+                        <input type="range" id="steerSlider" min="-100" max="100" value="0">
+                        <span>R</span>
+                        <span class="slider-value" id="steerSliderValue">0%</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Instructions -->
+            <div class="instructions">
+                <h4>Keyboard Controls</h4>
+                <div class="key-hint"><span class="key">W</span> Accelerate</div>
+                <div class="key-hint"><span class="key">S</span> Brake/Reverse</div>
+                <div class="key-hint"><span class="key">A</span> Left</div>
+                <div class="key-hint"><span class="key">D</span> Right</div>
+                <div class="key-hint"><span class="key">SPACE</span> Deadman (hold!)</div>
+                <div style="margin-top: 10px; font-size: 0.8rem; color: #666;">
+                    GTA-style: gradual accel, fast brake, reverse after stop
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================================
+        // STATE
+        // ============================================================
+        const state = {
+            ws: null,
+            connected: false,
+            keys: { w: false, a: false, s: false, d: false },
+            deadman: false,
+            analogMode: false,
+            throttle: 0,
+            steer: 0,
+            lastTelemetry: null,
+            sendInterval: null
+        };
+
+        // ============================================================
+        // WEBSOCKET
+        // ============================================================
+        function connect() {
+            const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${location.host}/ws`;
+
+            console.log('Connecting to', wsUrl);
+            state.ws = new WebSocket(wsUrl);
+
+            state.ws.onopen = () => {
+                console.log('WebSocket connected');
+                state.connected = true;
+                updateConnectionStatus('connected');
+                startSendLoop();
+            };
+
+            state.ws.onclose = () => {
+                console.log('WebSocket closed');
+                state.connected = false;
+                updateConnectionStatus('disconnected');
+                stopSendLoop();
+                setTimeout(connect, 2000);
+            };
+
+            state.ws.onerror = (e) => {
+                console.error('WebSocket error', e);
+            };
+
+            state.ws.onmessage = (event) => {
+                try {
+                    const msg = JSON.parse(event.data);
+                    if (msg.type === 'telemetry' && msg.telemetry) {
+                        handleTelemetry(msg.telemetry);
+                    } else if (msg.type === 'status') {
+                        console.log('Server status:', msg.status);
+                    }
+                } catch (e) {
+                    console.error('Failed to parse message', e);
+                }
+            };
+        }
+
+        function updateConnectionStatus(status) {
+            const dot = document.getElementById('statusDot');
+            const text = document.getElementById('statusText');
+
+            dot.className = 'status-dot ' + status;
+            text.textContent = status === 'connected' ? 'Connected' :
+                               status === 'stale' ? 'Stale' : 'Disconnected';
+        }
+
+        // ============================================================
+        // SEND LOOP (20-50Hz)
+        // ============================================================
+        function startSendLoop() {
+            if (state.sendInterval) return;
+
+            state.sendInterval = setInterval(() => {
+                if (!state.connected) return;
+                sendInput();
+            }, 25); // 40Hz
+        }
+
+        function stopSendLoop() {
+            if (state.sendInterval) {
+                clearInterval(state.sendInterval);
+                state.sendInterval = null;
+            }
+        }
+
+        function sendInput() {
+            const input = {
+                type: state.analogMode ? 'analog' : 'keys',
+                deadman: state.deadman,
+                forward: state.keys.w,
+                backward: state.keys.s,
+                left: state.keys.a,
+                right: state.keys.d,
+                timestamp: Date.now()
+            };
+
+            // Add analog values if in analog mode
+            if (state.analogMode) {
+                input.throttle = state.throttle;
+                input.steer = state.steer;
+            }
+
+            if (state.ws && state.ws.readyState === WebSocket.OPEN) {
+                state.ws.send(JSON.stringify(input));
+            }
+        }
+
+        // ============================================================
+        // TELEMETRY
+        // ============================================================
+        function handleTelemetry(telemetry) {
+            state.lastTelemetry = telemetry;
+
+            // Update speed gauge
+            const speedPercent = Math.abs(telemetry.speed) * 100;
+            const speedFill = document.getElementById('speedFill');
+            const isReverse = telemetry.speed < 0;
+
+            speedFill.className = 'gauge-fill speed' + (isReverse ? ' reverse' : '');
+            if (isReverse) {
+                speedFill.style.left = (50 - speedPercent / 2) + '%';
+                speedFill.style.width = (speedPercent / 2) + '%';
+            } else {
+                speedFill.style.left = '50%';
+                speedFill.style.width = (speedPercent / 2) + '%';
+            }
+
+            document.getElementById('speedDirection').textContent =
+                telemetry.speed > 0.01 ? 'Forward' :
+                telemetry.speed < -0.01 ? 'Reverse' : 'Neutral';
+            document.getElementById('speedValue').textContent = speedPercent.toFixed(0) + '%';
+
+            // Update steer gauge
+            const steerPercent = Math.abs(telemetry.steer) * 100;
+            const steerFill = document.getElementById('steerFill');
+            const isLeft = telemetry.steer < 0;
+
+            if (isLeft) {
+                steerFill.style.left = (50 - steerPercent / 2) + '%';
+                steerFill.style.width = (steerPercent / 2) + '%';
+            } else {
+                steerFill.style.left = '50%';
+                steerFill.style.width = (steerPercent / 2) + '%';
+            }
+
+            document.getElementById('steerDirection').textContent =
+                telemetry.steer < -0.01 ? 'Left' :
+                telemetry.steer > 0.01 ? 'Right' : 'Center';
+            document.getElementById('steerValue').textContent = steerPercent.toFixed(0) + '%';
+
+            // Update pulse displays
+            document.getElementById('escPulse').textContent = telemetry.escPulseUs + ' µs';
+            document.getElementById('steerPulse').textContent = telemetry.steerPulseUs + ' µs';
+
+            // Update status
+            const deadmanStatus = document.getElementById('deadmanStatus');
+            if (telemetry.deadmanActive) {
+                deadmanStatus.style.color = '#4ade80';
+                deadmanStatus.textContent = '✅ Deadman active - DRIVING';
+            } else {
+                deadmanStatus.style.color = '#f87171';
+                deadmanStatus.textContent = '⚠️ Hold SPACE to enable';
+            }
+
+            const staleStatus = document.getElementById('staleStatus');
+            if (telemetry.stale) {
+                staleStatus.textContent = '⚠️ Input stale - failsafe active';
+                updateConnectionStatus('stale');
+            } else {
+                staleStatus.textContent = '';
+                if (state.connected) updateConnectionStatus('connected');
+            }
+        }
+
+        // ============================================================
+        // KEYBOARD INPUT
+        // ============================================================
+        document.addEventListener('keydown', (e) => {
+            if (e.repeat) return;
+
+            const key = e.key.toLowerCase();
+            console.log('keydown:', key);
+
+            if (key === ' ') {
+                e.preventDefault();
+                state.deadman = true;
+                document.getElementById('btnDeadman').classList.add('active');
+                console.log('Deadman: ON');
+            } else if (key in state.keys) {
+                e.preventDefault();
+                state.keys[key] = true;
+                state.analogMode = false;
+                const btn = document.getElementById('btn' + key.toUpperCase());
+                if (btn) btn.classList.add('active');
+                console.log('Key pressed:', key, 'state:', state.keys);
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            const key = e.key.toLowerCase();
+
+            if (key === ' ') {
+                state.deadman = false;
+                document.getElementById('btnDeadman').classList.remove('active');
+                console.log('Deadman: OFF');
+            } else if (key in state.keys) {
+                state.keys[key] = false;
+                const btn = document.getElementById('btn' + key.toUpperCase());
+                if (btn) btn.classList.remove('active');
+                console.log('Key released:', key);
+            }
+        });
+
+        // ============================================================
+        // TOUCH CONTROLS
+        // ============================================================
+        function setupTouchButton(id, keyOrAction) {
+            const btn = document.getElementById(id);
+            if (!btn) return;
+
+            const activate = () => {
+                if (keyOrAction === 'deadman') {
+                    state.deadman = true;
+                } else {
+                    state.keys[keyOrAction] = true;
+                    state.analogMode = false;
+                }
+                btn.classList.add('active');
+            };
+
+            const deactivate = () => {
+                if (keyOrAction === 'deadman') {
+                    state.deadman = false;
+                } else {
+                    state.keys[keyOrAction] = false;
+                }
+                btn.classList.remove('active');
+            };
+
+            btn.addEventListener('pointerdown', (e) => {
+                e.preventDefault();
+                activate();
+            });
+
+            btn.addEventListener('pointerup', deactivate);
+            btn.addEventListener('pointerleave', deactivate);
+            btn.addEventListener('pointercancel', deactivate);
+        }
+
+        setupTouchButton('btnW', 'w');
+        setupTouchButton('btnA', 'a');
+        setupTouchButton('btnS', 's');
+        setupTouchButton('btnD', 'd');
+        setupTouchButton('btnDeadman', 'deadman');
+
+        // ============================================================
+        // SLIDERS (ANALOG MODE)
+        // ============================================================
+        const throttleSlider = document.getElementById('throttleSlider');
+        const steerSlider = document.getElementById('steerSlider');
+
+        throttleSlider.addEventListener('input', () => {
+            state.analogMode = true;
+            state.throttle = parseInt(throttleSlider.value) / 100;
+            document.getElementById('throttleValue').textContent = throttleSlider.value + '%';
+        });
+
+        steerSlider.addEventListener('input', () => {
+            state.analogMode = true;
+            state.steer = parseInt(steerSlider.value) / 100;
+            document.getElementById('steerSliderValue').textContent = steerSlider.value + '%';
+        });
+
+        // Reset sliders on release (spring back to center)
+        throttleSlider.addEventListener('pointerup', () => {
+            throttleSlider.value = 0;
+            state.throttle = 0;
+            document.getElementById('throttleValue').textContent = '0%';
+        });
+
+        steerSlider.addEventListener('pointerup', () => {
+            steerSlider.value = 0;
+            state.steer = 0;
+            document.getElementById('steerSliderValue').textContent = '0%';
+        });
+
+        // ============================================================
+        // INIT
+        // ============================================================
+        connect();
+        initVideoFeed();
+
+        // Prevent context menu on long press
+        document.addEventListener('contextmenu', e => e.preventDefault());
+
+        // ============================================================
+        // VIDEO FEED
+        // ============================================================
+        function initVideoFeed() {
+            const videoFrame = document.getElementById('videoFrame');
+            const placeholder = document.getElementById('videoPlaceholder');
+
+            // Build camera URL - same host, different port (8889)
+            // The camera server runs on port 8889 on the same Pi
+            const cameraPort = 8889;
+            const cameraPath = '/cam/';
+            const cameraUrl = `${location.protocol}//${location.hostname}:${cameraPort}${cameraPath}`;
+
+            console.log('Camera URL:', cameraUrl);
+
+            // Set iframe source
+            videoFrame.src = cameraUrl;
+
+            // Hide placeholder when iframe loads
+            videoFrame.onload = () => {
+                console.log('Video feed loaded');
+                placeholder.classList.remove('visible');
+            };
+
+            // Show error if iframe fails
+            videoFrame.onerror = () => {
+                console.error('Failed to load video feed');
+                placeholder.innerHTML = `
+                    <div class="icon">⚠️</div>
+                    <div>Camera not available</div>
+                    <div style="font-size: 0.8rem; margin-top: 5px;">
+                        Check if camera server is running on port ${cameraPort}
+                    </div>
+                `;
+                placeholder.classList.add('visible');
+            };
+        }
+    </script>
+</body>
+</html>
+

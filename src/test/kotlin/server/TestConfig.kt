@@ -17,13 +17,11 @@ object TestConfig {
      */
     val defaultServoConfig = ServoConfig(
         channel = 0,
-        minPulseUs = 1200,
+        minPulseUs = 1300,
         maxPulseUs = 1800,
-        minAngle = 0f,
-        maxAngle = 180f,
-        centerAngle = 120f,
-        leftAngle = 90f,
-        rightAngle = 150f
+        centerPulseUs = 1500,
+        leftPulseUs = 1750,
+        rightPulseUs = 1350
     )
 
     val defaultMotorConfig = MotorConfig(

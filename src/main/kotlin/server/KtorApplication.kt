@@ -10,9 +10,15 @@ import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import org.koin.ktor.ext.inject
 import org.koin.ktor.plugin.Koin
 import org.koin.logger.slf4jLogger
+import server.control.ControlLoop
+import server.control.setupControlRoutes
 import server.data.config.HardwareConfig
 import server.di.mockModule
 import server.di.productionModule
@@ -86,11 +92,9 @@ fun Application.loadHardwareConfig() {
                 channel = servoConfig.property("channel").getString().toInt(),
                 minPulseUs = servoConfig.property("minPulseUs").getString().toInt(),
                 maxPulseUs = servoConfig.property("maxPulseUs").getString().toInt(),
-                minAngle = servoConfig.property("minAngle").getString().toFloat(),
-                maxAngle = servoConfig.property("maxAngle").getString().toFloat(),
-                centerAngle = servoConfig.property("centerAngle").getString().toFloat(),
-                leftAngle = servoConfig.property("leftAngle").getString().toFloat(),
-                rightAngle = servoConfig.property("rightAngle").getString().toFloat()
+                centerPulseUs = servoConfig.property("centerPulseUs").getString().toInt(),
+                leftPulseUs = servoConfig.property("leftPulseUs").getString().toInt(),
+                rightPulseUs = servoConfig.property("rightPulseUs").getString().toInt()
             ),
             motor = server.data.config.MotorConfig(
                 channel = motorConfig.property("channel").getString().toInt(),
@@ -144,18 +148,31 @@ fun Application.configureRouting() {
     val safePwmController: SafePwmController by inject()
     val steeringController: SteeringController by inject()
     val motorController: MotorController by inject()
+    val controlLoop: ControlLoop by inject()
+
+    // Start the 50Hz control loop
+    val controlScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+    controlLoop.start(controlScope)
+
+    // Stop control loop on shutdown
+    environment.monitor.subscribe(ApplicationStopped) {
+        controlLoop.stop()
+        controlScope.cancel()
+    }
 
     routing {
         // API routes first (more specific)
         setupDebugRoutes()
         setupCalibrationRoutes(safePwmController, steeringController, motorController)
         setupWebSocketRoutes(carController)
+        setupControlRoutes(controlLoop)
 
         // Serve static files from resources/static at root
-        // This serves calibration-tool.html at /calibration-tool.html
+        // This serves index.html, control.html, calibration-tool.html
         staticResources("/", "static")
     }
 
     println("🚀 Pi-Car Server running on http://0.0.0.0:8080")
-    println("🔧 Calibration tool available at http://0.0.0.0:8080/calibration-tool.html")
+    println("🎮 Remote control at http://0.0.0.0:8080/control.html")
+    println("🔧 Calibration tool at http://0.0.0.0:8080/calibration-tool.html")
 }

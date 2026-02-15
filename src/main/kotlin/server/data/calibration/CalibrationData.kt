@@ -34,9 +34,9 @@ data class SetThrottleRequest(
 data class UpdateServoCalibrationRequest(
     val minPulseUs: Int? = null,
     val maxPulseUs: Int? = null,
-    val centerAngle: Float? = null,
-    val leftAngle: Float? = null,
-    val rightAngle: Float? = null
+    val centerPulseUs: Int? = null,
+    val leftPulseUs: Int? = null,
+    val rightPulseUs: Int? = null
 )
 
 /**
@@ -67,11 +67,9 @@ data class ServoCalibration(
     val channel: Int,
     val minPulseUs: Int,
     val maxPulseUs: Int,
-    val minAngle: Float,
-    val maxAngle: Float,
-    val centerAngle: Float,
-    val leftAngle: Float,
-    val rightAngle: Float
+    val centerPulseUs: Int,
+    val leftPulseUs: Int,
+    val rightPulseUs: Int
 )
 
 @Serializable

@@ -7,64 +7,39 @@ The car uses a PCA9685 PWM driver to control a servo (steering) and a brushless 
 
 ## ✅ Features
 
+- **WebRTC video streaming** for FPV control
+- **GTA-style remote control** with keyboard/touch controls and 50Hz control loop
 - WebSocket control interface (Ktor)
 - Servo-based steering using Diozero + PCA9685
 - Brushless ESC motor throttle control via PWM
 - **Hardware calibration API and web UI** for tuning steering and motor parameters
 - Configuration management via YAML (application.yaml)
 - Modular hardware abstraction (`ServoManager`, `MotorManager`, `CarController`)
-- Kotlin-based server-side logic with clean project structure
-- Lab power supply support for safe development
+- **Safety features**: Deadman switch, 250ms failsafe timeout
 
 ---
 
-## 🧠 Project Recap
+## 🧠 Quick Overview
 
-> Last tested: **February 2026**
+| Component | Model |
+|-----------|-------|
+| SBC | Raspberry Pi 4 B+ |
+| PWM Driver | PCA9685 (I2C, address `0x40`) |
+| Steering | Etronix ES060 servo |
+| Motor | Surpass Hobby 2430 Brushless |
+| ESC | Surpass Hobby 25A |
+| Camera | Raspberry Pi Camera Module (WebRTC via MediaMTX) |
 
-### Core Components
-
-| Component           | Details                                                                 |
-|--------------------|-------------------------------------------------------------------------|
-| SBC                | Raspberry Pi 4 B+                                                       |
-| PWM Driver         | PCA9685 over I2C (default address `0x40`)                               |
-| Servo              | Etronix ES060                                                           |
-| ESC                | Surpass Hobby 25A sensorless brushless ESC (powered separately)         |
-| Motor              | Surpass Hobby 2430 Brushless                                            |
-| Power Supply       | Wanptek WPS3010H (lab PSU with adjustable current limit)                |
-
-### Architecture
-main()
-├─ PCA9685 (1 instance)
-├─ ServoManager (channel 0) → steeringServo
-└─ MotorManager (channel 1) → ESC throttle
-
-### ✅ Current Progress
-
-- ✅ Steering fully functional with ServoManager (angle tested)
-- ✅ ESC control verified (requires 1500 µs neutral → 1600 µs forward)
-- ✅ Diozero PCA9685 driver working correctly
-- ✅ Proper power sequencing implemented (ESC arming requires ~2 sec neutral)
-- ✅ PSU current limit set to avoid OCP triggers during motor spin-up
+For complete hardware details, wiring diagrams, and setup instructions, see **[docs/HARDWARE.md](./docs/HARDWARE.md)**.
 
 ---
 
-## ⚙️ Lab PSU Configuration (Wanptek WPS3010H)
+## 🚀 Quick Start
 
-| Setting        | Value              | Note                                                |
-|----------------|--------------------|-----------------------------------------------------|
-| **Voltage**    | `7.4V`             | Emulates 2S LiPo battery                            |
-| **Current**    | `9A`               | Lower values (e.g. 2A) may cause ESC shutdown (OCP) |
-
----
-
-## 🔌 PWM Timing Settings (PCA9685 @ 50Hz)
-
-| Signal Type     | Microseconds | Notes                                      |
-|-----------------|--------------|--------------------------------------------|
-| **Neutral**     | `1500 µs`    | Required to arm ESC (wait ~2 seconds)      |
-| **Forward**     | `1600 µs`    | ESC starts spinning the motor forward      |
-| **Reverse**     | `1400 µs`    | Reverse spin (optional, depending on ESC)  |
+1. **Deploy to Pi**: Use the IntelliJ run configuration or `./scripts/deploy.sh`
+2. **Start camera**: `sudo mediamtx /etc/mediamtx.yml` (on Pi)
+3. **Open control page**: `http://<pi-ip>:8080/`
+4. **Drive!** Hold SPACE (deadman) and use WASD to control
 
 ---
 
@@ -151,17 +126,21 @@ Hardware settings are stored in `src/main/resources/application.yaml`:
 hardware:
   servo:
     channel: 0
-    centerAngle: 120.0
-    leftAngle: 90.0
-    rightAngle: 150.0
+    minPulseUs: 1300
+    maxPulseUs: 1800
+    centerPulseUs: 1500
+    leftPulseUs: 1750
+    rightPulseUs: 1350
   motor:
     channel: 1
     neutralPulseUs: 1500
-    forwardMinPulseUs: 1600
-    reverseMaxPulseUs: 1400
+    forwardMinPulseUs: 1590
+    forwardMaxPulseUs: 1700
+    reverseMaxPulseUs: 1410
+    reverseMinPulseUs: 1300
 ```
 
-After calibration, update these values and restart the server.
+Use the calibration tool to find optimal values, then update this file.
 
 ---
 
@@ -176,8 +155,9 @@ After calibration, update these values and restart the server.
 
 ## 📚 Documentation
 
-- **[docs/QUICKSTART_CALIBRATION.md](./docs/QUICKSTART_CALIBRATION.md)** - 15-minute calibration quick start
+- **[docs/HARDWARE.md](./docs/HARDWARE.md)** - Complete hardware setup, wiring, and camera configuration
 - **[docs/CALIBRATION.md](./docs/CALIBRATION.md)** - Complete calibration API reference
+- **[docs/QUICKSTART_CALIBRATION.md](./docs/QUICKSTART_CALIBRATION.md)** - 15-minute calibration quick start
 - **[docs/SECURITY.md](./docs/SECURITY.md)** - Security setup guide (credentials & SSH keys)
 
-**Calibration Tool:** Open your browser to `http://<pi-ip>:8080/` when the server is running.
+**Web UI:** Open your browser to `http://<pi-ip>:8080/` when the server is running.

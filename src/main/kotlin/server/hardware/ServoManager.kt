@@ -6,17 +6,17 @@ import server.domain.ports.SteeringController
 /**
  * Servo manager implementing the SteeringController port.
  * Controls steering servo using PWM signals.
+ * Uses pulse-based calibration for precise control.
  */
 class ServoManager(
     private val pwmController: PwmController,
     private val servoChannel: Int = 0,
     private val minPulseUs: Int = 1000,
     private val maxPulseUs: Int = 2000,
-    private val minAngle: Float = 0f,
-    private val maxAngle: Float = 180f,
-    private val centerAngle: Float = 120f,
-    private val leftAngle: Float = 90f,
-    private val rightAngle: Float = 150f
+    // Pulse-based calibration (precise steering positions)
+    private val centerPulseUs: Int = 1500,
+    private val leftPulseUs: Int = 1200,
+    private val rightPulseUs: Int = 1800
 ) : SteeringController {
 
     init {
@@ -24,25 +24,25 @@ class ServoManager(
     }
 
     override fun setAngle(angle: Float) {
-        val clampedAngle = angle.coerceIn(minAngle, maxAngle)
-        val pulse = angleToPulse(clampedAngle)
+        // Convert angle (0-180) to pulse using linear interpolation
+        val pulse = angleToPulse(angle)
         println("🛞 Setting steering angle: $angle° -> Pulse: $pulse µs")
         pwmController.setDutyUs(servoChannel, pulse)
     }
 
     override fun center() {
-        println("🛞 Centering steering")
-        setAngle(centerAngle)
+        println("🛞 Centering steering -> $centerPulseUs µs")
+        pwmController.setDutyUs(servoChannel, centerPulseUs)
     }
 
     override fun turnLeft() {
-        println("↩️ Steering left")
-        setAngle(leftAngle)
+        println("↩️ Steering left -> $leftPulseUs µs")
+        pwmController.setDutyUs(servoChannel, leftPulseUs)
     }
 
     override fun turnRight() {
-        println("↪️ Steering right")
-        setAngle(rightAngle)
+        println("↪️ Steering right -> $rightPulseUs µs")
+        pwmController.setDutyUs(servoChannel, rightPulseUs)
     }
 
     override fun shutdown() {
@@ -51,10 +51,11 @@ class ServoManager(
     }
 
     /**
-     * Convert angle to pulse width (useful for testing).
+     * Convert angle (0-180) to pulse width using linear interpolation.
+     * This is kept for backward compatibility with setAngle() interface.
      */
     fun angleToPulse(angle: Float): Int {
-        val normalizedAngle = (angle - minAngle) / (maxAngle - minAngle)
+        val normalizedAngle = (angle.coerceIn(0f, 180f)) / 180f
         return minPulseUs + ((maxPulseUs - minPulseUs) * normalizedAngle).toInt()
     }
 }

@@ -15,35 +15,30 @@ class ServoManagerTest {
         servoChannel = servoChannel,
         minPulseUs = 1000,
         maxPulseUs = 2000,
-        minAngle = 0f,
-        maxAngle = 180f,
-        centerAngle = 120f,
-        leftAngle = 90f,
-        rightAngle = 150f
+        centerPulseUs = 1500,
+        leftPulseUs = 1750,
+        rightPulseUs = 1350
     )
 
     @Test
-    fun `center should set steering to center angle`() {
+    fun `center should set steering to center pulse`() {
         servoManager.center()
 
-        // 120° with 0-180 range: (120/180) * (2000-1000) + 1000 = 1666
-        verify { mockPwmController.setDutyUs(servoChannel, 1666) }
-    }
-
-    @Test
-    fun `turnLeft should set steering to left angle`() {
-        servoManager.turnLeft()
-
-        // 90° with 0-180 range: (90/180) * (2000-1000) + 1000 = 1500
         verify { mockPwmController.setDutyUs(servoChannel, 1500) }
     }
 
     @Test
-    fun `turnRight should set steering to right angle`() {
+    fun `turnLeft should set steering to left pulse`() {
+        servoManager.turnLeft()
+
+        verify { mockPwmController.setDutyUs(servoChannel, 1750) }
+    }
+
+    @Test
+    fun `turnRight should set steering to right pulse`() {
         servoManager.turnRight()
 
-        // 150° with 0-180 range: (150/180) * (2000-1000) + 1000 = 1833
-        verify { mockPwmController.setDutyUs(servoChannel, 1833) }
+        verify { mockPwmController.setDutyUs(servoChannel, 1350) }
     }
 
     @Test
@@ -86,7 +81,7 @@ class ServoManagerTest {
     fun `shutdown should center the steering`() {
         servoManager.shutdown()
 
-        verify { mockPwmController.setDutyUs(servoChannel, 1666) }
+        verify { mockPwmController.setDutyUs(servoChannel, 1500) }
     }
 
     @Test

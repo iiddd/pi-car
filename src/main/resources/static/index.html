@@ -1,11 +1,163 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <meta http-equiv="refresh" content="0; url=calibration-tool.html">
-    <title>Redirecting to Calibration Tool</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pi-Car Control Center</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #e94560;
+            font-size: 3rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .subtitle {
+            color: #a0a0a0;
+            margin-bottom: 40px;
+            font-size: 1.2rem;
+        }
+
+        .card-container {
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 40px;
+            width: 300px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+
+        .card:hover {
+            transform: translateY(-10px);
+            background: rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        }
+
+        .card-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            color: white;
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+        }
+
+        .card-description {
+            color: #888;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        .card.drive {
+            border-color: #e94560;
+        }
+
+        .card.drive:hover {
+            border-color: #e94560;
+            box-shadow: 0 20px 40px rgba(233, 69, 96, 0.2);
+        }
+
+        .card.calibrate {
+            border-color: #667eea;
+        }
+
+        .card.calibrate:hover {
+            border-color: #667eea;
+            box-shadow: 0 20px 40px rgba(102, 126, 234, 0.2);
+        }
+
+        .status-bar {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.7);
+            padding: 10px 20px;
+            border-radius: 20px;
+            color: #888;
+            font-size: 0.9rem;
+        }
+
+        .status-bar.connected {
+            color: #4ade80;
+        }
+
+        .status-bar.disconnected {
+            color: #f87171;
+        }
+    </style>
 </head>
 <body>
-    <p>Redirecting to <a href="calibration-tool.html">Calibration Tool</a>...</p>
+    <h1>🏎️ Pi-Car</h1>
+    <p class="subtitle">Control Center</p>
+
+    <div class="card-container">
+        <a href="control.html" class="card drive">
+            <div class="card-icon">🎮</div>
+            <div class="card-title">Remote Control</div>
+            <div class="card-description">
+                Drive the car with keyboard or touch controls.
+                GTA-style acceleration with video feed.
+            </div>
+        </a>
+
+        <a href="calibration-tool.html" class="card calibrate">
+            <div class="card-icon">🔧</div>
+            <div class="card-title">Calibration</div>
+            <div class="card-description">
+                Fine-tune steering angles, motor dead zones,
+                and PWM timing parameters.
+            </div>
+        </a>
+    </div>
+
+    <div id="status" class="status-bar">Checking connection...</div>
+
+    <script>
+        async function checkStatus() {
+            const statusEl = document.getElementById('status');
+            try {
+                const response = await fetch('/status');
+                const data = await response.json();
+                statusEl.textContent = `✅ Connected ${data.mockMode ? '(Mock Mode)' : ''}`;
+                statusEl.className = 'status-bar connected';
+            } catch (e) {
+                statusEl.textContent = '❌ Server not responding';
+                statusEl.className = 'status-bar disconnected';
+            }
+        }
+
+        checkStatus();
+        setInterval(checkStatus, 5000);
+    </script>
 </body>
 </html>
-

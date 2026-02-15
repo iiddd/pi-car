@@ -19,11 +19,10 @@ data class ServoConfig(
     val channel: Int,
     val minPulseUs: Int,
     val maxPulseUs: Int,
-    val minAngle: Float,
-    val maxAngle: Float,
-    val centerAngle: Float,
-    val leftAngle: Float,
-    val rightAngle: Float
+    // Pulse-based calibration (precise steering control)
+    val centerPulseUs: Int,
+    val leftPulseUs: Int,
+    val rightPulseUs: Int
 )
 
 @Serializable

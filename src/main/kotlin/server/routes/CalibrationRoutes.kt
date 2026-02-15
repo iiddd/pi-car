@@ -30,11 +30,9 @@ fun Route.setupCalibrationRoutes(
                     channel = Config.servoConfig.channel,
                     minPulseUs = Config.servoConfig.minPulseUs,
                     maxPulseUs = Config.servoConfig.maxPulseUs,
-                    minAngle = Config.servoConfig.minAngle,
-                    maxAngle = Config.servoConfig.maxAngle,
-                    centerAngle = Config.servoConfig.centerAngle,
-                    leftAngle = Config.servoConfig.leftAngle,
-                    rightAngle = Config.servoConfig.rightAngle
+                    centerPulseUs = Config.servoConfig.centerPulseUs,
+                    leftPulseUs = Config.servoConfig.leftPulseUs,
+                    rightPulseUs = Config.servoConfig.rightPulseUs
                 ),
                 motor = MotorCalibration(
                     channel = Config.motorConfig.channel,
@@ -113,9 +111,9 @@ fun Route.setupCalibrationRoutes(
                 Config.updateServoCalibration(
                     minPulseUs = request.minPulseUs,
                     maxPulseUs = request.maxPulseUs,
-                    centerAngle = request.centerAngle,
-                    leftAngle = request.leftAngle,
-                    rightAngle = request.rightAngle
+                    centerPulseUs = request.centerPulseUs,
+                    leftPulseUs = request.leftPulseUs,
+                    rightPulseUs = request.rightPulseUs
                 )
                 call.respondText("✅ Servo calibration updated", status = HttpStatusCode.OK)
             } catch (e: Exception) {
@@ -168,6 +166,69 @@ fun Route.setupCalibrationRoutes(
             println("🛑 POST /calibration/motor/stop")
             motorController.stop()
             call.respondText("✅ Motor stopped", status = HttpStatusCode.OK)
+        }
+
+        // Export current configuration as JSON (for backup/restore)
+        get("/export") {
+            println("📤 GET /calibration/export - Exporting configuration")
+            val response = CalibrationResponse(
+                servo = ServoCalibration(
+                    channel = Config.servoConfig.channel,
+                    minPulseUs = Config.servoConfig.minPulseUs,
+                    maxPulseUs = Config.servoConfig.maxPulseUs,
+                    centerPulseUs = Config.servoConfig.centerPulseUs,
+                    leftPulseUs = Config.servoConfig.leftPulseUs,
+                    rightPulseUs = Config.servoConfig.rightPulseUs
+                ),
+                motor = MotorCalibration(
+                    channel = Config.motorConfig.channel,
+                    minPulseUs = Config.motorConfig.minPulseUs,
+                    maxPulseUs = Config.motorConfig.maxPulseUs,
+                    neutralPulseUs = Config.motorConfig.neutralPulseUs,
+                    forwardMinPulseUs = Config.motorConfig.forwardMinPulseUs,
+                    forwardMaxPulseUs = Config.motorConfig.forwardMaxPulseUs,
+                    reverseMaxPulseUs = Config.motorConfig.reverseMaxPulseUs,
+                    reverseMinPulseUs = Config.motorConfig.reverseMinPulseUs
+                )
+            )
+            call.response.header(
+                HttpHeaders.ContentDisposition,
+                "attachment; filename=\"pi-car-config.json\""
+            )
+            call.respond(response)
+        }
+
+        // Import configuration from JSON
+        post("/import") {
+            println("📥 POST /calibration/import - Importing configuration")
+            try {
+                val config = call.receive<CalibrationResponse>()
+
+                // Update servo config
+                Config.updateServoCalibration(
+                    minPulseUs = config.servo.minPulseUs,
+                    maxPulseUs = config.servo.maxPulseUs,
+                    centerPulseUs = config.servo.centerPulseUs,
+                    leftPulseUs = config.servo.leftPulseUs,
+                    rightPulseUs = config.servo.rightPulseUs
+                )
+
+                // Update motor config
+                Config.updateMotorCalibration(
+                    minPulseUs = config.motor.minPulseUs,
+                    maxPulseUs = config.motor.maxPulseUs,
+                    neutralPulseUs = config.motor.neutralPulseUs,
+                    forwardMinPulseUs = config.motor.forwardMinPulseUs,
+                    forwardMaxPulseUs = config.motor.forwardMaxPulseUs,
+                    reverseMaxPulseUs = config.motor.reverseMaxPulseUs,
+                    reverseMinPulseUs = config.motor.reverseMinPulseUs
+                )
+
+                call.respondText("✅ Configuration imported successfully", status = HttpStatusCode.OK)
+            } catch (e: Exception) {
+                println("❌ Error importing config: ${e.message}")
+                call.respond(HttpStatusCode.BadRequest, "Error: ${e.message}")
+            }
         }
     }
 }

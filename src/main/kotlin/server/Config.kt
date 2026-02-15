@@ -54,8 +54,9 @@ object Config {
         _motorConfig = hardwareConfig.motor
         _configLoaded = true
         println("✅ Hardware config loaded from application.yaml:")
-        println("   Servo: channel=${servoConfig.channel}, limits=${servoConfig.minPulseUs}-${servoConfig.maxPulseUs}µs, center=${servoConfig.centerAngle}°")
-        println("   Motor: channel=${motorConfig.channel}, limits=${motorConfig.minPulseUs}-${motorConfig.maxPulseUs}µs, neutral=${motorConfig.neutralPulseUs}µs")
+        println("   Servo: channel=${servoConfig.channel}, range=${servoConfig.minPulseUs}-${servoConfig.maxPulseUs}µs")
+        println("   Servo positions: left=${servoConfig.leftPulseUs}µs, center=${servoConfig.centerPulseUs}µs, right=${servoConfig.rightPulseUs}µs")
+        println("   Motor: channel=${motorConfig.channel}, range=${motorConfig.minPulseUs}-${motorConfig.maxPulseUs}µs, neutral=${motorConfig.neutralPulseUs}µs")
         println("   Motor dead zone: reverse=${motorConfig.reverseMaxPulseUs}µs ← neutral → forward=${motorConfig.forwardMinPulseUs}µs")
     }
 
@@ -65,16 +66,16 @@ object Config {
     fun updateServoCalibration(
         minPulseUs: Int? = null,
         maxPulseUs: Int? = null,
-        centerAngle: Float? = null,
-        leftAngle: Float? = null,
-        rightAngle: Float? = null
+        centerPulseUs: Int? = null,
+        leftPulseUs: Int? = null,
+        rightPulseUs: Int? = null
     ) {
         servoConfig = servoConfig.copy(
             minPulseUs = minPulseUs ?: servoConfig.minPulseUs,
             maxPulseUs = maxPulseUs ?: servoConfig.maxPulseUs,
-            centerAngle = centerAngle ?: servoConfig.centerAngle,
-            leftAngle = leftAngle ?: servoConfig.leftAngle,
-            rightAngle = rightAngle ?: servoConfig.rightAngle
+            centerPulseUs = centerPulseUs ?: servoConfig.centerPulseUs,
+            leftPulseUs = leftPulseUs ?: servoConfig.leftPulseUs,
+            rightPulseUs = rightPulseUs ?: servoConfig.rightPulseUs
         )
         println("🔧 Servo calibration updated: $servoConfig")
     }
