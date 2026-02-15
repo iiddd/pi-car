@@ -6,19 +6,23 @@ import kotlin.math.sign
 /**
  * GTA-style driver logic.
  * Maintains normalized speed [-1..1] and steer [-1..1] values.
+ *
+ * Note: Reverse is limited to low speed for maneuvering only.
  */
 class GtaDriver(
     // Throttle rates (per second)
     private val accelRate: Float = 0.8f,
     private val coastRate: Float = 1.2f,
     private val brakeRate: Float = 3.0f,
-    private val reverseAccelRate: Float = 0.6f,
+    private val reverseAccelRate: Float = 0.3f,   // Slow reverse acceleration (maneuvering only)
     // Steering rates (per second)
     private val steerRate: Float = 3.0f,
     private val steerReturnRate: Float = 5.0f,
     // Thresholds
     private val stopThreshold: Float = 0.05f,
-    private val reverseThreshold: Float = 0.1f
+    private val reverseThreshold: Float = 0.1f,
+    // Reverse speed limit (0.3 = 30% of max, for maneuvering)
+    private val maxReverseSpeed: Float = 0.3f
 ) {
     var speed: Float = 0f
         private set
@@ -42,13 +46,14 @@ class GtaDriver(
     }
 
     private fun handleAnalogInput(deltaSeconds: Float, input: ControlInput) {
-        val targetThrottle = input.throttle ?: 0f
+        // Limit reverse target to maxReverseSpeed (maneuvering only)
+        val targetThrottle = (input.throttle ?: 0f).coerceIn(-maxReverseSpeed, 1f)
         val targetSteer = input.steer ?: 0f
 
         val throttleDiff = targetThrottle - speed
         val maxThrottleChange = accelRate * deltaSeconds
         speed += throttleDiff.coerceIn(-maxThrottleChange * 2, maxThrottleChange * 2)
-        speed = speed.coerceIn(-1f, 1f)
+        speed = speed.coerceIn(-maxReverseSpeed, 1f)
 
         val steerDiff = targetSteer - steer
         val maxSteerChange = steerRate * deltaSeconds
@@ -76,8 +81,9 @@ class GtaDriver(
                         speed = speed.coerceAtLeast(0f)
                     }
                     speed <= reverseThreshold && !wasBrakingFromForward -> {
+                        // Reverse acceleration - limited to maxReverseSpeed for maneuvering
                         speed -= reverseAccelRate * deltaSeconds
-                        speed = speed.coerceAtLeast(-1f)
+                        speed = speed.coerceAtLeast(-maxReverseSpeed)
                     }
                     wasBrakingFromForward && speed <= stopThreshold -> {
                         wasBrakingFromForward = false

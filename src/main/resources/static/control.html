@@ -327,7 +327,7 @@
 
         <!-- Video Feed -->
         <div class="video-section">
-            <iframe id="videoFrame" src="" allow="autoplay"></iframe>
+            <iframe id="videoFrame" src="" allow="autoplay" tabindex="-1"></iframe>
             <div class="video-placeholder visible" id="videoPlaceholder">
                 <div class="icon">📷</div>
                 <div>Connecting to camera...</div>
@@ -619,9 +619,37 @@
         // ============================================================
         // KEYBOARD INPUT
         // ============================================================
+
+        // Track if we have focus issues
+        let lastKeyTime = 0;
+
+        // Ensure document has focus for keyboard input
+        function ensureFocus() {
+            // If an iframe or input has focus, return focus to body
+            if (document.activeElement &&
+                (document.activeElement.tagName === 'IFRAME' ||
+                 document.activeElement.tagName === 'INPUT')) {
+                document.body.focus();
+            }
+        }
+
+        // Click anywhere to regain focus
+        document.addEventListener('click', () => {
+            ensureFocus();
+        });
+
+        // Periodically check focus (backup for iframe stealing focus)
+        setInterval(() => {
+            // If deadman is held but no key events received for 500ms, try to regain focus
+            if (state.deadman && Date.now() - lastKeyTime > 500) {
+                ensureFocus();
+            }
+        }, 250);
+
         document.addEventListener('keydown', (e) => {
             if (e.repeat) return;
 
+            lastKeyTime = Date.now();
             const key = e.key.toLowerCase();
             console.log('keydown:', key);
 
@@ -641,6 +669,7 @@
         });
 
         document.addEventListener('keyup', (e) => {
+            lastKeyTime = Date.now();
             const key = e.key.toLowerCase();
 
             if (key === ' ') {
@@ -720,12 +749,14 @@
             throttleSlider.value = 0;
             state.throttle = 0;
             document.getElementById('throttleValue').textContent = '0%';
+            throttleSlider.blur(); // Return focus to body for keyboard
         });
 
         steerSlider.addEventListener('pointerup', () => {
             steerSlider.value = 0;
             state.steer = 0;
             document.getElementById('steerSliderValue').textContent = '0%';
+            steerSlider.blur(); // Return focus to body for keyboard
         });
 
         // ============================================================
@@ -736,6 +767,29 @@
 
         // Prevent context menu on long press
         document.addEventListener('contextmenu', e => e.preventDefault());
+
+        // Handle window losing focus - reset all keys to prevent stuck keys
+        window.addEventListener('blur', () => {
+            console.log('Window lost focus - resetting keys');
+            // Reset all keys
+            state.keys.w = false;
+            state.keys.a = false;
+            state.keys.s = false;
+            state.keys.d = false;
+            state.deadman = false;
+
+            // Update UI
+            ['W', 'A', 'S', 'D', 'Deadman'].forEach(k => {
+                const btn = document.getElementById('btn' + k);
+                if (btn) btn.classList.remove('active');
+            });
+        });
+
+        // Regain focus when window is focused again
+        window.addEventListener('focus', () => {
+            console.log('Window regained focus');
+            ensureFocus();
+        });
 
         // ============================================================
         // VIDEO FEED
